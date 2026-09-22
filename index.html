@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>極・Killer Sudoku (キラー数独)</title>
+  <title>キラーナンプレ - Killer Sudoku</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=M+PLUS+Rounded+1c:wght@600;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
   
   <style>
     * {
@@ -17,131 +17,135 @@
       touch-action: manipulation;
       box-sizing: border-box;
     }
-    :root {
-      --board-border: #4338ca;
-      --cell-border-subtle: #1e293b;
-      --cage-dashed: #818cf8;
-    }
     body {
-      font-family: 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #060913;
-      color: #f8fafc;
+      font-family: 'Public Sans', 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f7f9fc;
+      color: #1e293b;
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
       overflow-x: hidden;
-      padding-bottom: env(safe-area-inset-bottom, 12px);
-      padding-top: env(safe-area-inset-top, 8px);
+      padding-bottom: env(safe-area-inset-bottom, 10px);
+      padding-top: env(safe-area-inset-top, 6px);
     }
 
-    .board-wrapper {
+    /* Board container with crisp borders */
+    .board-container {
       width: 100%;
-      max-width: 430px;
+      max-width: 410px;
       margin: 0 auto;
       aspect-ratio: 1 / 1;
-      padding: 3px;
-      background: #0f172a;
-      border: 3px solid #6366f1;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.2);
+      background: #ffffff;
+      border: 2px solid #1e293b;
+      position: relative;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    /* SVG Layer covering the entire board for inset dashed cages */
+    .cage-svg-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .sudoku-grid {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
       grid-template-rows: repeat(9, 1fr);
+      width: 100%;
+      height: 100%;
       position: relative;
+      z-index: 1;
     }
 
-    .sudoku-cell {
+    .cell {
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: transparent;
+      background: #ffffff;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
       cursor: pointer;
-      transition: background-color 0.12s ease;
+      transition: background-color 0.1s ease;
     }
 
-    /* 3x3 standard block borders */
-    .sudoku-cell:nth-child(3n) {
-      border-right: 2px solid rgba(99, 102, 241, 0.55);
+    /* 3x3 block separation */
+    .cell:nth-child(3n) {
+      border-right: 2px solid #1e293b;
     }
-    .sudoku-cell:nth-child(9n) {
+    .cell:nth-child(9n) {
       border-right: none;
     }
-    .row-border-sub {
-      border-bottom: 2px solid rgba(99, 102, 241, 0.55) !important;
+    .cell.block-bottom {
+      border-bottom: 2px solid #1e293b;
+    }
+    .cell.grid-bottom {
+      border-bottom: none;
     }
 
-    /* Killer Sudoku Cage Dashed Borders (Injected dynamically) */
-    .cage-top { border-top: 1.5px dashed var(--cage-dashed) !important; }
-    .cage-bottom { border-bottom: 1.5px dashed var(--cage-dashed) !important; }
-    .cage-left { border-left: 1.5px dashed var(--cage-dashed) !important; }
-    .cage-right { border-right: 1.5px dashed var(--cage-dashed) !important; }
-
-    .cell-number {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(1.2rem, 5.2vw, 1.8rem);
-      font-weight: 800;
-      line-height: 1;
-      z-index: 2;
-    }
-    .clue-val { color: #94a3b8; font-weight: 700; }
-    .user-val { color: #38bdf8; }
-    .wrong-val { 
-      color: #f87171 !important; 
-      animation: cellShake 0.3s ease;
-    }
-
-    .cage-sum-tag {
-      position: absolute;
-      top: 1px;
-      left: 2px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(8px, 2.3vw, 10px);
-      font-weight: 800;
-      color: #c7d2fe;
-      background: rgba(15, 23, 42, 0.85);
-      padding: 0 2px;
-      border-radius: 2px;
-      line-height: 1;
-      pointer-events: none;
-      z-index: 4;
-    }
-
-    /* Highlight themes */
+    /* Cell Colors like Sudoku.com */
     .cell-selected {
-      background-color: #4338ca !important;
-      border-radius: 4px;
-      z-index: 3;
-    }
-    .cell-same-cage {
-      background-color: rgba(99, 102, 241, 0.22);
+      background-color: #bbdefb !important; /* Vivid soft blue */
     }
     .cell-related {
-      background-color: rgba(51, 65, 85, 0.35);
+      background-color: #edf5fc !important; /* Gentle peer tint */
     }
     .cell-same-number {
-      background-color: rgba(56, 189, 248, 0.28);
+      background-color: #d1e8fc !important;
     }
 
-    /* Pencil notes grid */
+    .cage-sum-text {
+      font-family: 'Public Sans', sans-serif;
+      font-size: clamp(8.5px, 2.4vw, 11px);
+      font-weight: 700;
+      fill: #334155;
+    }
+
+    .cage-stroke {
+      stroke: #64748b;
+      stroke-width: 1.25;
+      stroke-dasharray: 3.5, 2.5;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    .cell-number {
+      font-size: clamp(1.4rem, 6vw, 1.95rem);
+      font-weight: 600;
+      line-height: 1;
+      z-index: 5;
+    }
+    .user-val { color: #1d4ed8; } /* Bright clean blue */
+    .clue-val { color: #0f172a; font-weight: 700; }
+    .wrong-val { 
+      color: #ef4444 !important; 
+      animation: cellShake 0.28s ease;
+    }
+
+    /* Pencil notes */
     .note-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
       width: 100%;
       height: 100%;
-      padding: 2px;
+      padding: 3px;
       pointer-events: none;
+      z-index: 5;
     }
     .note-digit {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(7.5px, 2vw, 9.5px);
-      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(8px, 2.2vw, 10px);
       font-weight: 700;
-      color: #94a3b8;
+      color: #64748b;
       line-height: 1;
     }
 
@@ -151,160 +155,200 @@
       75% { transform: translateX(3px); }
     }
 
-    .key-tap {
+    .btn-touch {
       transition: transform 0.08s ease, filter 0.08s ease;
     }
-    .key-tap:active {
-      transform: scale(0.92);
-      filter: brightness(1.25);
+    .btn-touch:active {
+      transform: scale(0.93);
+      filter: brightness(0.92);
     }
   </style>
 </head>
-<body class="p-2 sm:p-4 max-w-md mx-auto">
+<body class="px-2.5 sm:px-4 max-w-md mx-auto">
 
-  <header class="w-full flex items-center justify-between mb-1.5 px-1">
-    <div>
-      <div class="flex items-center gap-2">
-        <h1 class="text-xl font-black tracking-wide bg-gradient-to-r from-indigo-400 via-sky-300 to-teal-300 bg-clip-text text-transparent">
-          Killer Sudoku
-        </h1>
-        <span id="badgeDiff" class="text-[10px] tracking-wider px-2 py-0.5 rounded-full font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/60">
-          上級
-        </span>
-      </div>
-      <div class="flex items-center gap-3 text-xs text-slate-400 font-mono mt-0.5">
-        <span id="recordLabel">BEST: --:--</span>
-        <span id="cageInfoLabel" class="text-indigo-400 font-bold">ケージ計: --</span>
+  <!-- Top App Navigation -->
+  <header class="w-full flex items-center justify-between pt-1 pb-2 border-b border-slate-200/80">
+    <div class="flex items-center gap-1.5">
+      <button id="btnBackMenu" class="text-slate-500 hover:text-slate-800 p-1 -ml-1">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <div>
+        <h1 class="text-base sm:text-lg font-black text-slate-800 tracking-tight leading-tight">キラーナンプレ</h1>
+        <p class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">AI Unlimited Engine</p>
       </div>
     </div>
 
-    <!-- Difficulty selector & New Button -->
-    <div class="flex items-center gap-1.5">
-      <select id="diffSelect" class="bg-slate-900 border border-slate-700 text-indigo-300 text-xs font-bold rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-indigo-500">
-        <option value="hard" selected>上級 (Hard)</option>
-        <option value="expert">エキスパート (Expert)</option>
-        <option value="master">極・マスター (Master)</option>
+    <!-- Quick tier change & new game -->
+    <div class="flex items-center gap-2">
+      <select id="diffSelect" class="bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none shadow-sm focus:border-blue-500">
+        <option value="hard">上級</option>
+        <option value="expert" selected>エキスパート</option>
+        <option value="master">極・マスター</option>
       </select>
-      <button id="btnNewPuzzle" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-2.5 py-1.5 rounded-lg shadow transition flex items-center gap-1 key-tap">
+      <button id="btnNewGameTop" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-sm btn-touch flex items-center gap-1">
         <svg id="genSpinIcon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
         <span>生成</span>
       </button>
     </div>
   </header>
 
-  <section class="w-full flex items-center justify-between px-3 py-1.5 bg-slate-900/90 rounded-xl border border-slate-800 mb-2 shadow-inner">
-    <div class="flex items-center gap-2">
-      <span class="text-xs text-slate-400 font-semibold">ミス:</span>
-      <span id="mistakeBadge" class="text-xs font-mono font-black px-2 py-0.5 rounded bg-slate-800 text-rose-400 tracking-wider">
-        0 / 3
-      </span>
+  <!-- Top Status Stats (難易度 / 間違い / タイム) matching Sudoku.com -->
+  <section class="w-full grid grid-cols-3 text-center py-2.5 px-1 items-center">
+    <div>
+      <span class="block text-[11px] font-bold text-slate-400">難易度</span>
+      <span id="labelTier" class="text-sm font-bold text-slate-700">エキスパート</span>
     </div>
-
-    <div class="flex items-center gap-2 font-mono">
-      <svg class="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-      <span id="timerDisplay" class="text-sm font-bold text-slate-200">00:00</span>
-      <button id="btnPause" class="text-slate-400 hover:text-white p-1 rounded">
-        <svg id="pauseSvg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+    <div>
+      <span class="block text-[11px] font-bold text-slate-400">間違い</span>
+      <span id="mistakeBadge" class="text-sm font-bold text-slate-700 tracking-wide">0/3</span>
+    </div>
+    <div class="flex items-center justify-center gap-1.5">
+      <div>
+        <span class="block text-[11px] font-bold text-slate-400">タイム</span>
+        <span id="timerDisplay" class="text-sm font-bold text-slate-700 font-mono">00:00</span>
+      </div>
+      <button id="btnPause" class="text-slate-400 hover:text-slate-700 p-1 mt-1">
+        <svg id="pauseSvg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
       </button>
     </div>
   </section>
 
+  <!-- Board Canvas with SVG Dashed Cages -->
   <main class="w-full flex-1 flex flex-col justify-center items-center relative my-auto">
-    <div id="sudokuGrid" class="board-wrapper">
-      <!-- 81 dynamic cells -->
+    <div id="boardContainer" class="board-container">
+      <div id="sudokuGrid" class="sudoku-grid">
+        <!-- 81 dynamic interactive cells -->
+      </div>
+      <!-- SVG overlay for rendering inset dashed cage lines and sum tags -->
+      <svg id="cageSvg" class="cage-svg-layer" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
 
     <!-- AI Generation Loading Overlay -->
-    <div id="loaderModal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center z-30">
-      <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-      <p class="text-sm font-bold text-indigo-300">Killer Sudoku AI生成中...</p>
-      <span class="text-[11px] text-slate-400 mt-1">ケージ分割・合計値検証中</span>
+    <div id="loaderModal" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-30 rounded-lg">
+      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+      <p class="text-sm font-bold text-slate-800">キラーナンプレ AI無限生成中...</p>
+      <span class="text-[11px] text-slate-500 mt-0.5">ケージの合計と唯一解を検証しています</span>
     </div>
 
     <!-- Pause Overlay -->
-    <div id="pauseModal" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center z-25">
-      <h3 class="text-xl font-bold text-indigo-300 mb-4">一時停止中</h3>
-      <button id="btnResume" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg key-tap">
+    <div id="pauseModal" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-30 rounded-lg">
+      <h3 class="text-lg font-bold text-slate-800 mb-4">一時停止中</h3>
+      <button id="btnResume" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-7 py-2.5 rounded-full shadow-md btn-touch">
         ゲーム再開
       </button>
     </div>
   </main>
 
-  <section class="w-full grid grid-cols-4 gap-2 my-2">
-    <button id="btnUndo" class="key-tap flex flex-col items-center justify-center py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-300">
-      <svg class="w-5 h-5 mb-0.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
-      <span class="text-[10px] font-bold">1手戻す</span>
-    </button>
-    
-    <button id="btnErase" class="key-tap flex flex-col items-center justify-center py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-300">
-      <svg class="w-5 h-5 mb-0.5 text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      <span class="text-[10px] font-bold">消去</span>
-    </button>
-
-    <button id="btnMemo" class="key-tap flex flex-col items-center justify-center py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 relative">
-      <div id="memoStatusDot" class="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-slate-600"></div>
-      <svg class="w-5 h-5 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-      <span id="memoStatusText" class="text-[10px] font-bold">メモ OFF</span>
+  <!-- Action Tools Bar (元に戻す / 消す / メモ / ヒント) -->
+  <section class="w-full grid grid-cols-4 gap-2 my-2.5 px-2">
+    <!-- Undo -->
+    <button id="btnUndo" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 active:text-blue-600">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 0 1 5 5v2m0 0l-3-3m3 3l3-3M3 10l3-3m-3 3l3 3"/></svg>
+      </div>
+      <span class="text-xs font-semibold">元に戻す</span>
     </button>
 
-    <button id="btnHint" class="key-tap flex flex-col items-center justify-center py-2 bg-slate-900 border border-slate-800 rounded-xl text-slate-300">
-      <svg class="w-5 h-5 mb-0.5 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/></svg>
-      <span class="text-[10px] font-bold">ヒント</span>
+    <!-- Erase -->
+    <button id="btnErase" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 active:text-blue-600">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </div>
+      <span class="text-xs font-semibold">消す</span>
+    </button>
+
+    <!-- Memo / Notes with Badge -->
+    <button id="btnMemo" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 relative">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5 relative">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+        <span id="memoBadge" class="absolute -top-0.5 -right-1 text-[9px] font-bold px-1 rounded-full bg-slate-400 text-white">OFF</span>
+      </div>
+      <span class="text-xs font-semibold">メモ</span>
+    </button>
+
+    <!-- Hint -->
+    <button id="btnHint" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 active:text-blue-600">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5 relative">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+        <span class="absolute -top-0.5 -right-1 text-[9px] font-bold px-1.5 rounded-full bg-blue-600 text-white">1</span>
+      </div>
+      <span class="text-xs font-semibold">ヒント</span>
     </button>
   </section>
 
-  <section class="w-full grid grid-cols-9 gap-1 sm:gap-1.5">
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="1">1<span class="text-[9px] text-slate-500 font-normal" id="digit-count-1">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="2">2<span class="text-[9px] text-slate-500 font-normal" id="digit-count-2">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="3">3<span class="text-[9px] text-slate-500 font-normal" id="digit-count-3">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="4">4<span class="text-[9px] text-slate-500 font-normal" id="digit-count-4">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="5">5<span class="text-[9px] text-slate-500 font-normal" id="digit-count-5">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="6">6<span class="text-[9px] text-slate-500 font-normal" id="digit-count-6">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="7">7<span class="text-[9px] text-slate-500 font-normal" id="digit-count-7">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="8">8<span class="text-[9px] text-slate-500 font-normal" id="digit-count-8">9</span></button>
-    <button class="key-tap num-btn h-12 rounded-xl bg-slate-900 border border-slate-800 text-indigo-300 text-xl font-black flex flex-col items-center justify-center active:bg-indigo-600 active:text-white" data-digit="9">9<span class="text-[9px] text-slate-500 font-normal" id="digit-count-9">9</span></button>
+  <!-- 1-9 Blue Number Pad matching reference screenshot -->
+  <section class="w-full grid grid-cols-9 gap-1 sm:gap-1.5 mb-2">
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="1">
+      1<span id="digit-count-1" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="2">
+      2<span id="digit-count-2" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="3">
+      3<span id="digit-count-3" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="4">
+      4<span id="digit-count-4" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="5">
+      5<span id="digit-count-5" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="6">
+      6<span id="digit-count-6" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="7">
+      7<span id="digit-count-7" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="8">
+      8<span id="digit-count-8" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
+    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="9">
+      9<span id="digit-count-9" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
+    </button>
   </section>
 
-  <div id="gameOverModal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-rose-600/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-      <div class="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-black">✕</div>
-      <h2 class="text-2xl font-black text-white mb-1">ゲームオーバー</h2>
-      <p class="text-xs text-slate-400 mb-5">ミスが3回に達しました。Killer Sudokuの推論を再構築しましょう。</p>
+  <!-- Game Over Modal (3 Strikes) -->
+  <div id="gameOverModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border border-slate-100">
+      <div class="w-14 h-14 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl font-black">✕</div>
+      <h2 class="text-xl font-black text-slate-800 mb-1">ゲームオーバー</h2>
+      <p class="text-xs text-slate-500 mb-5">3回間違えました。再度挑戦してケージの合計関係を見極めましょう！</p>
       
-      <div class="flex gap-2.5">
-        <button id="btnRetryCurrent" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl border border-slate-700 key-tap">
-          同じ盤面を再挑戦
+      <div class="flex gap-2">
+        <button id="btnRetryCurrent" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl btn-touch text-xs">
+          再挑戦する
         </button>
-        <button id="btnNewFromGameOver" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow key-tap">
+        <button id="btnNewFromGameOver" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl btn-touch text-xs shadow-sm">
           新しい問題
         </button>
       </div>
     </div>
   </div>
 
-  <div id="winModal" class="hidden fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-indigo-500/50 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl">
-      <div class="w-16 h-16 bg-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl">🏆</div>
-      <h2 class="text-2xl font-black text-white mb-1">完全制覇！</h2>
-      <p class="text-xs text-slate-400 mb-4">Killer Sudokuの合計縛りを攻略しました</p>
+  <!-- Victory Modal -->
+  <div id="winModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border border-slate-100">
+      <div class="w-14 h-14 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🏆</div>
+      <h2 class="text-xl font-black text-slate-800 mb-1">素晴らしい！クリア！</h2>
+      <p class="text-xs text-slate-500 mb-4">Killer Sudokuの推論を見事に完成させました。</p>
       
-      <div class="bg-slate-800/90 rounded-xl p-3 mb-5 space-y-2 text-xs text-slate-300">
+      <div class="bg-slate-50 rounded-xl p-3 mb-5 space-y-1.5 text-xs text-slate-600 border border-slate-100">
         <div class="flex justify-between">
           <span class="text-slate-400">難易度:</span>
-          <span id="winTierLabel" class="font-bold text-indigo-300">マスター (極)</span>
+          <span id="winTierLabel" class="font-bold text-slate-800">エキスパート</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-slate-400">クリア時間:</span>
-          <span id="winTimeLabel" class="font-bold font-mono text-white text-base">--:--</span>
+          <span class="text-slate-400">タイム:</span>
+          <span id="winTimeLabel" class="font-bold font-mono text-blue-600 text-sm">--:--</span>
         </div>
         <div class="flex justify-between">
           <span class="text-slate-400">ベストタイム:</span>
-          <span id="winBestLabel" class="font-bold font-mono text-amber-300">--:--</span>
+          <span id="winBestLabel" class="font-bold font-mono text-slate-700">--:--</span>
         </div>
       </div>
 
-      <button id="btnNextPuzzle" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-indigo-500 hover:to-sky-500 text-white font-bold rounded-xl shadow-lg key-tap">
-        次のKillerパズルを生成
+      <button id="btnNextPuzzle" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md btn-touch text-sm">
+        次のパズルを生成
       </button>
     </div>
   </div>
@@ -314,16 +358,16 @@
   <script>
     const TIERS = {
       hard: { name: '上級', clueCount: 4, minCage: 2, maxCage: 3 },
-      expert: { name: 'エキスパート', clueCount: 2, minCage: 2, maxCage: 4 },
-      master: { name: '極・マスター', clueCount: 0, minCage: 2, maxCage: 5 } // Zero initial digits, pure deduction
+      expert: { name: 'エキスパート', clueCount: 1, minCage: 2, maxCage: 4 },
+      master: { name: '極・マスター', clueCount: 0, minCage: 2, maxCage: 5 } // Zero given numbers
     };
 
-    let currentTier = 'hard';
-    let solutionGrid = [];       // 9x9 solution
+    let currentTier = 'expert';
+    let solutionGrid = [];
     let cages = [];              // Array of { id, sum, cells: [[r,c], ...], sumCell: [r,c] }
     let cellCageMap = {};        // 'r,c' -> cage index
-    let userGrid = [];           // 9x9 current player values
-    let initialClues = [];       // 9x9 initial numbers (0 if blank)
+    let userGrid = [];
+    let initialClues = [];
     let pencilGrid = Array.from({ length: 81 }, () => new Set());
     let selectedCellIndex = null;
     let isMemoMode = false;
@@ -336,23 +380,22 @@
     let isGameWon = false;
     let undoStack = [];
 
-    // DOM References
+    // DOM Elements
+    const boardContainer = document.getElementById('boardContainer');
     const sudokuGridEl = document.getElementById('sudokuGrid');
+    const cageSvg = document.getElementById('cageSvg');
     const timerDisplay = document.getElementById('timerDisplay');
     const mistakeBadge = document.getElementById('mistakeBadge');
-    const badgeDiff = document.getElementById('badgeDiff');
-    const recordLabel = document.getElementById('recordLabel');
-    const cageInfoLabel = document.getElementById('cageInfoLabel');
+    const labelTier = document.getElementById('labelTier');
     const diffSelect = document.getElementById('diffSelect');
-    const btnNewPuzzle = document.getElementById('btnNewPuzzle');
+    const btnNewGameTop = document.getElementById('btnNewGameTop');
     const genSpinIcon = document.getElementById('genSpinIcon');
     const loaderModal = document.getElementById('loaderModal');
     const btnPause = document.getElementById('btnPause');
     const pauseModal = document.getElementById('pauseModal');
     const btnResume = document.getElementById('btnResume');
     const btnMemo = document.getElementById('btnMemo');
-    const memoStatusDot = document.getElementById('memoStatusDot');
-    const memoStatusText = document.getElementById('memoStatusText');
+    const memoBadge = document.getElementById('memoBadge');
     const btnUndo = document.getElementById('btnUndo');
     const btnErase = document.getElementById('btnErase');
     const btnHint = document.getElementById('btnHint');
@@ -362,6 +405,7 @@
     const winModal = document.getElementById('winModal');
     const btnNextPuzzle = document.getElementById('btnNextPuzzle');
 
+    // Generator Engine
     class KillerGenerator {
       static createBlank() {
         return Array.from({ length: 9 }, () => Array(9).fill(0));
@@ -390,27 +434,22 @@
       }
 
       static solveRandomSudoku(grid) {
-        let bestR = -1;
-        let bestC = -1;
-        let minOptions = 10;
-        let bestOpts = null;
-
+        let bestR = -1, bestC = -1, minOpts = 10, bestOpts = null;
         for (let r = 0; r < 9; r++) {
           for (let c = 0; c < 9; c++) {
             if (grid[r][c] === 0) {
               const opts = this.getValidValues(grid, r, c);
-              if (opts.length < minOptions) {
-                minOptions = opts.length;
+              if (opts.length < minOpts) {
+                minOpts = opts.length;
                 bestR = r;
                 bestC = c;
                 bestOpts = opts;
-                if (minOptions === 0) return false;
+                if (minOpts === 0) return false;
               }
             }
           }
         }
-
-        if (bestR === -1) return true; // complete
+        if (bestR === -1) return true;
 
         bestOpts.sort(() => Math.random() - 0.5);
         for (const num of bestOpts) {
@@ -421,19 +460,18 @@
         return false;
       }
 
-      // Partition 81 cells into cages using randomized clustering
       static buildCages(solution, minC, maxC) {
         const assigned = Array.from({ length: 9 }, () => Array(9).fill(false));
         const cages = [];
         let cageId = 0;
 
         const getUnassignedNeighbors = (r, c) => {
-          const neighbors = [];
-          if (r > 0 && !assigned[r - 1][c]) neighbors.push([r - 1, c]);
-          if (r < 8 && !assigned[r + 1][c]) neighbors.push([r + 1, c]);
-          if (c > 0 && !assigned[r][c - 1]) neighbors.push([r, c - 1]);
-          if (c < 8 && !assigned[r][c + 1]) neighbors.push([r, c + 1]);
-          return neighbors;
+          const res = [];
+          if (r > 0 && !assigned[r - 1][c]) res.push([r - 1, c]);
+          if (r < 8 && !assigned[r + 1][c]) res.push([r + 1, c]);
+          if (c > 0 && !assigned[r][c - 1]) res.push([r, c - 1]);
+          if (c < 8 && !assigned[r][c + 1]) res.push([r, c + 1]);
+          return res;
         };
 
         for (let r = 0; r < 9; r++) {
@@ -442,33 +480,26 @@
 
             const targetSize = Math.floor(Math.random() * (maxC - minC + 1)) + minC;
             const cageCells = [[r, c]];
-            const seenNumbers = new Set([solution[r][c]]);
+            const seen = new Set([solution[r][c]]);
             assigned[r][c] = true;
 
             while (cageCells.length < targetSize) {
-              // Gather available adjacent cells
               const candidateNeighbors = [];
               for (const [cr, cc] of cageCells) {
-                const adj = getUnassignedNeighbors(cr, cc);
-                for (const item of adj) {
-                  // Killer rule: Digits in cage cannot repeat
+                for (const item of getUnassignedNeighbors(cr, cc)) {
                   const val = solution[item[0]][item[1]];
-                  if (!seenNumbers.has(val)) {
-                    candidateNeighbors.push(item);
-                  }
+                  if (!seen.has(val)) candidateNeighbors.push(item);
                 }
               }
-
               if (candidateNeighbors.length === 0) break;
               const pick = candidateNeighbors[Math.floor(Math.random() * candidateNeighbors.length)];
               if (!assigned[pick[0]][pick[1]]) {
                 assigned[pick[0]][pick[1]] = true;
-                seenNumbers.add(solution[pick[0]][pick[1]]);
+                seen.add(solution[pick[0]][pick[1]]);
                 cageCells.push(pick);
               }
             }
 
-            // Top-left cell in cage gets the sum tag
             cageCells.sort((a, b) => (a[0] * 9 + a[1]) - (b[0] * 9 + b[1]));
             const sumVal = cageCells.reduce((acc, curr) => acc + solution[curr[0]][curr[1]], 0);
 
@@ -492,7 +523,6 @@
             const tier = TIERS[tierKey];
             const cages = this.buildCages(fullGrid, tier.minCage, tier.maxCage);
 
-            // Prefilled initial clues (0 for Master level)
             const clues = this.createBlank();
             if (tier.clueCount > 0) {
               const allPos = [];
@@ -506,12 +536,8 @@
               }
             }
 
-            resolve({
-              solution: fullGrid,
-              cages: cages,
-              clues: clues
-            });
-          }, 30);
+            resolve({ solution: fullGrid, cages, clues });
+          }, 40);
         });
       }
     }
@@ -522,8 +548,9 @@
         const r = Math.floor(i / 9);
         const c = i % 9;
         const cell = document.createElement('div');
-        cell.className = 'sudoku-cell';
-        if (r === 2 || r === 5) cell.classList.add('row-border-sub');
+        cell.className = 'cell';
+        if (r === 2 || r === 5) cell.classList.add('block-bottom');
+        if (r === 8) cell.classList.add('grid-bottom');
         cell.dataset.index = i;
         cell.dataset.row = r;
         cell.dataset.col = c;
@@ -532,56 +559,111 @@
       }
     }
 
-    function applyCageStyles() {
-      const cells = sudokuGridEl.querySelectorAll('.sudoku-cell');
-      // Reset borders & sum tags
-      cells.forEach(el => {
-        el.classList.remove('cage-top', 'cage-bottom', 'cage-left', 'cage-right');
-        const oldTag = el.querySelector('.cage-sum-tag');
-        if (oldTag) oldTag.remove();
-      });
+    /**
+     * Renders inset dashed lines in SVG.
+     * Crucial for clarity: Insetting the dashed lines by ~3px creates the exact
+     * crisp, distinguishable look seen in Sudoku.com.
+     */
+    function renderSvgCages() {
+      cageSvg.innerHTML = '';
+      const w = boardContainer.clientWidth;
+      const h = boardContainer.clientHeight;
+      if (!w || !h) return;
+
+      cageSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      const cellW = w / 9;
+      const cellH = h / 9;
+      const inset = Math.max(2.5, Math.min(4, cellW * 0.075)); // Inset distance from cell border
 
       cages.forEach(cage => {
-        const cageCellSet = new Set(cage.cells.map(([r, c]) => `${r},${c}`));
+        const cellSet = new Set(cage.cells.map(([r, c]) => `${r},${c}`));
 
+        // 1. Draw Inset Dashed Segments for each cell border not shared with same cage
         cage.cells.forEach(([r, c]) => {
-          const idx = r * 9 + c;
-          const el = cells[idx];
+          const x0 = c * cellW;
+          const y0 = r * cellH;
+          const x1 = (c + 1) * cellW;
+          const y1 = (r + 1) * cellH;
 
-          if (!cageCellSet.has(`${r - 1},${c}`)) el.classList.add('cage-top');
-          if (!cageCellSet.has(`${r + 1},${c}`)) el.classList.add('cage-bottom');
-          if (!cageCellSet.has(`${r},${c - 1}`)) el.classList.add('cage-left');
-          if (!cageCellSet.has(`${r},${c + 1}`)) el.classList.add('cage-right');
+          const hasTop = cellSet.has(`${r - 1},${c}`);
+          const hasBottom = cellSet.has(`${r + 1},${c}`);
+          const hasLeft = cellSet.has(`${r},${c - 1}`);
+          const hasRight = cellSet.has(`${r},${c + 1}`);
 
-          // Sum badge on top-left anchor
-          if (r === cage.sumCell[0] && c === cage.sumCell[1]) {
-            const badge = document.createElement('span');
-            badge.className = 'cage-sum-tag';
-            badge.textContent = cage.sum;
-            el.appendChild(badge);
+          // Top edge
+          if (!hasTop) {
+            const lx0 = hasLeft ? x0 : x0 + inset;
+            const lx1 = hasRight ? x1 : x1 - inset;
+            drawLine(lx0, y0 + inset, lx1, y0 + inset);
+          }
+          // Bottom edge
+          if (!hasBottom) {
+            const lx0 = hasLeft ? x0 : x0 + inset;
+            const lx1 = hasRight ? x1 : x1 - inset;
+            drawLine(lx0, y1 - inset, lx1, y1 - inset);
+          }
+          // Left edge
+          if (!hasLeft) {
+            const ly0 = hasTop ? y0 : y0 + inset;
+            const ly1 = hasBottom ? y1 : y1 - inset;
+            drawLine(x0 + inset, ly0, x0 + inset, ly1);
+          }
+          // Right edge
+          if (!hasRight) {
+            const ly0 = hasTop ? y0 : y0 + inset;
+            const ly1 = hasBottom ? y1 : y1 - inset;
+            drawLine(x1 - inset, ly0, x1 - inset, ly1);
+          }
+
+          // Inner corners when diagonally adjacent but not orthogonally
+          if (hasTop && hasLeft && !cellSet.has(`${r - 1},${c - 1}`)) {
+            drawLine(x0, y0 + inset, x0 + inset, y0 + inset);
+            drawLine(x0 + inset, y0, x0 + inset, y0 + inset);
+          }
+          if (hasTop && hasRight && !cellSet.has(`${r - 1},${c + 1}`)) {
+            drawLine(x1 - inset, y0 + inset, x1, y0 + inset);
+            drawLine(x1 - inset, y0, x1 - inset, y0 + inset);
+          }
+          if (hasBottom && hasLeft && !cellSet.has(`${r + 1},${c - 1}`)) {
+            drawLine(x0, y1 - inset, x0 + inset, y1 - inset);
+            drawLine(x0 + inset, y1 - inset, x0 + inset, y1);
+          }
+          if (hasBottom && hasRight && !cellSet.has(`${r + 1},${c + 1}`)) {
+            drawLine(x1 - inset, y1 - inset, x1, y1 - inset);
+            drawLine(x1 - inset, y1 - inset, x1 - inset, y1);
           }
         });
+
+        // 2. Render Sum Number Label on top-left of the first cell of the cage
+        const [sr, sc] = cage.sumCell;
+        const textX = sc * cellW + inset + 2.5;
+        const textY = sr * cellH + inset + (cellH * 0.24);
+
+        const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textEl.setAttribute('x', textX);
+        textEl.setAttribute('y', textY);
+        textEl.setAttribute('class', 'cage-sum-text');
+        textEl.textContent = cage.sum;
+        cageSvg.appendChild(textEl);
       });
     }
 
+    function drawLine(x1, y1, x2, y2) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('class', 'cage-stroke');
+      cageSvg.appendChild(line);
+    }
+
     function refreshBoard() {
-      const cells = sudokuGridEl.querySelectorAll('.sudoku-cell');
+      const cells = sudokuGridEl.querySelectorAll('.cell');
       const selR = selectedCellIndex !== null ? Math.floor(selectedCellIndex / 9) : null;
       const selC = selectedCellIndex !== null ? selectedCellIndex % 9 : null;
       const selVal = (selectedCellIndex !== null && userGrid.length) ? userGrid[selR][selC] : 0;
       const selCageId = selectedCellIndex !== null ? cellCageMap[`${selR},${selC}`] : null;
-
-      // Update current cage info text
-      if (selCageId !== null && cages[selCageId]) {
-        const activeCage = cages[selCageId];
-        let currentCageSum = 0;
-        activeCage.cells.forEach(([cr, cc]) => {
-          currentCageSum += userGrid[cr][cc];
-        });
-        cageInfoLabel.textContent = `ケージ計: ${currentCageSum} / ${activeCage.sum}`;
-      } else {
-        cageInfoLabel.textContent = 'ケージ計: --';
-      }
 
       const digitTally = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0 };
 
@@ -594,23 +676,25 @@
 
         if (val !== 0) digitTally[val]++;
 
-        // Clear highlight classes
-        cellEl.classList.remove('cell-selected', 'cell-same-cage', 'cell-related', 'cell-same-number');
+        // Highlights
+        cellEl.classList.remove('cell-selected', 'cell-related', 'cell-same-number');
 
         if (selectedCellIndex !== null) {
           if (i === selectedCellIndex) {
             cellEl.classList.add('cell-selected');
-          } else if (selCageId !== null && cellCageMap[`${r},${c}`] === selCageId) {
-            cellEl.classList.add('cell-same-cage');
-          } else if (r === selR || c === selC || (Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3))) {
+          } else if (
+            (selCageId !== null && cellCageMap[`${r},${c}`] === selCageId) || // Same cage highlight
+            r === selR || c === selC || 
+            (Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3))
+          ) {
             cellEl.classList.add('cell-related');
           }
-          if (selVal !== 0 && val === selVal) {
+          if (selVal !== 0 && val === selVal && i !== selectedCellIndex) {
             cellEl.classList.add('cell-same-number');
           }
         }
 
-        // Render value or notes
+        // Digits & Notes
         let numEl = cellEl.querySelector('.cell-number');
         let noteEl = cellEl.querySelector('.note-grid');
 
@@ -648,13 +732,13 @@
         }
       }
 
-      // Update remaining keypad labels
+      // Tally on keypad
       for (let d = 1; d <= 9; d++) {
-        const countSpan = document.getElementById(`digit-count-${d}`);
+        const span = document.getElementById(`digit-count-${d}`);
         const left = 9 - digitTally[d];
-        if (countSpan) {
-          countSpan.textContent = left <= 0 ? '✓' : left;
-          countSpan.className = `text-[9px] ${left <= 0 ? 'text-teal-400 font-bold' : 'text-slate-500 font-normal'}`;
+        if (span) {
+          span.textContent = left <= 0 ? '✓' : left;
+          span.className = `text-[10px] ${left <= 0 ? 'text-teal-600 font-bold' : 'text-slate-400 font-semibold'} mt-0.5`;
         }
       }
     }
@@ -671,13 +755,11 @@
         notes: pencilGrid.map(s => new Set(s)),
         mistakes: mistakeCount
       });
-      if (undoStack.length > 40) undoStack.shift();
+      if (undoStack.length > 30) undoStack.shift();
     }
 
     function triggerHaptic() {
-      if ('vibrate' in navigator) {
-        navigator.vibrate(60);
-      }
+      if ('vibrate' in navigator) navigator.vibrate(50);
     }
 
     function inputDigit(digit) {
@@ -685,12 +767,11 @@
       const r = Math.floor(selectedCellIndex / 9);
       const c = selectedCellIndex % 9;
 
-      if (initialClues[r][c] !== 0) return; // Clues are locked
+      if (initialClues[r][c] !== 0) return; // Clues locked
 
       pushHistory();
 
       if (isMemoMode) {
-        // Toggle candidate notes
         if (pencilGrid[selectedCellIndex].has(digit)) {
           pencilGrid[selectedCellIndex].delete(digit);
         } else {
@@ -698,18 +779,17 @@
         }
         userGrid[r][c] = 0;
       } else {
-        // Direct value placement
         if (userGrid[r][c] === digit) {
-          userGrid[r][c] = 0; // Toggle clear
+          userGrid[r][c] = 0;
         } else {
           userGrid[r][c] = digit;
           pencilGrid[selectedCellIndex].clear();
 
-          // Realtime Verification against unique solution
+          // Mistake Check
           if (digit !== solutionGrid[r][c]) {
             mistakeCount++;
             triggerHaptic();
-            updateMistakeUI();
+            updateMistakeBadge();
 
             if (mistakeCount >= MAX_MISTAKES) {
               handleGameOver();
@@ -717,7 +797,6 @@
               return;
             }
           } else {
-            // Clean up peer notes
             prunePencilNotes(r, c, digit);
           }
         }
@@ -740,7 +819,6 @@
           pencilGrid[(br + r) * 9 + (bc + c)].delete(num);
         }
       }
-      // Also prune from same cage
       const cageId = cellCageMap[`${row},${col}`];
       if (cageId !== undefined && cages[cageId]) {
         cages[cageId].cells.forEach(([cr, cc]) => {
@@ -749,15 +827,9 @@
       }
     }
 
-    function updateMistakeUI() {
-      mistakeBadge.textContent = `${mistakeCount} / ${MAX_MISTAKES}`;
-      if (mistakeCount >= MAX_MISTAKES) {
-        mistakeBadge.className = 'text-xs font-mono font-black px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 tracking-wider';
-      } else if (mistakeCount > 0) {
-        mistakeBadge.className = 'text-xs font-mono font-black px-2 py-0.5 rounded bg-rose-900/50 text-rose-400 tracking-wider';
-      } else {
-        mistakeBadge.className = 'text-xs font-mono font-black px-2 py-0.5 rounded bg-slate-800 text-rose-400 tracking-wider';
-      }
+    function updateMistakeBadge() {
+      mistakeBadge.textContent = `${mistakeCount}/${MAX_MISTAKES}`;
+      mistakeBadge.className = `text-sm font-bold tracking-wide ${mistakeCount > 0 ? 'text-rose-500' : 'text-slate-700'}`;
     }
 
     function handleGameOver() {
@@ -785,7 +857,7 @@
       userGrid = state.grid;
       pencilGrid = state.notes;
       mistakeCount = state.mistakes;
-      updateMistakeUI();
+      updateMistakeBadge();
       refreshBoard();
       saveActiveGame();
     }
@@ -828,9 +900,7 @@
     function checkVictory() {
       for (let r = 0; r < 9; r++) {
         for (let c = 0; c < 9; c++) {
-          if (userGrid[r][c] !== solutionGrid[r][c]) {
-            return false;
-          }
+          if (userGrid[r][c] !== solutionGrid[r][c]) return false;
         }
       }
 
@@ -845,7 +915,7 @@
 
       winModal.classList.remove('hidden');
       triggerConfetti();
-      localStorage.removeItem('killer_sudoku_active'); // Clear active puzzle on completion
+      localStorage.removeItem('killer_sudoku_active');
       return true;
     }
 
@@ -856,18 +926,9 @@
 
     function saveBestTime(tier, time) {
       const prev = getBestTime(tier);
-      if (!prev || time < prev) {
-        localStorage.setItem(`killer_best_${tier}`, time);
-      }
-      displayBestTime();
+      if (!prev || time < prev) localStorage.setItem(`killer_best_${tier}`, time);
     }
 
-    function displayBestTime() {
-      const best = getBestTime(currentTier);
-      recordLabel.textContent = best ? `BEST: ${formatTime(best)}` : 'BEST: --:--';
-    }
-
-    // Overwrite only: Zero storage buildup
     function saveActiveGame() {
       if (isGameWon || isGameOver) return;
       const payload = {
@@ -892,7 +953,7 @@
 
         currentTier = data.tier;
         diffSelect.value = currentTier;
-        badgeDiff.textContent = TIERS[currentTier].name;
+        labelTier.textContent = TIERS[currentTier].name;
         solutionGrid = data.solution;
         cages = data.cages;
         initialClues = data.clues;
@@ -901,7 +962,6 @@
         mistakeCount = data.mistakes || 0;
         elapsedSec = data.time || 0;
 
-        // Rebuild cage lookup
         cellCageMap = {};
         cages.forEach((cage, idx) => {
           cage.cells.forEach(([r, c]) => {
@@ -910,22 +970,19 @@
         });
 
         timerDisplay.textContent = formatTime(elapsedSec);
-        updateMistakeUI();
-        displayBestTime();
-        applyCageStyles();
+        updateMistakeBadge();
+        requestAnimationFrame(() => renderSvgCages());
         refreshBoard();
         startTimer();
         return true;
-      } catch (err) {
-        console.warn("Storage restoration bypassed:", err);
+      } catch (e) {
         return false;
       }
     }
 
     async function startNewGame(tierKey = currentTier) {
       currentTier = tierKey;
-      badgeDiff.textContent = TIERS[tierKey].name;
-      displayBestTime();
+      labelTier.textContent = TIERS[tierKey].name;
       winModal.classList.add('hidden');
       gameOverModal.classList.add('hidden');
       pauseModal.classList.add('hidden');
@@ -938,13 +995,11 @@
       selectedCellIndex = null;
       undoStack = [];
       timerDisplay.textContent = '00:00';
-      updateMistakeUI();
+      updateMistakeBadge();
 
-      // Show loader
       loaderModal.classList.remove('hidden');
       genSpinIcon.classList.add('animate-spin');
 
-      // Generate Killer Puzzle
       const data = await KillerGenerator.generateAsync(tierKey);
 
       solutionGrid = data.solution;
@@ -953,7 +1008,6 @@
       userGrid = data.clues.map(row => [...row]);
       pencilGrid = Array.from({ length: 81 }, () => new Set());
 
-      // Map cells to cage index
       cellCageMap = {};
       cages.forEach((cage, idx) => {
         cage.cells.forEach(([r, c]) => {
@@ -961,7 +1015,7 @@
         });
       });
 
-      applyCageStyles();
+      renderSvgCages();
       loaderModal.classList.add('hidden');
       genSpinIcon.classList.remove('animate-spin');
 
@@ -977,15 +1031,14 @@
       canvas.height = window.innerHeight;
 
       const particles = [];
-      const colors = ['#818cf8', '#38bdf8', '#34d399', '#f59e0b', '#ec4899'];
-
-      for (let i = 0; i < 90; i++) {
+      const colors = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
+      for (let i = 0; i < 80; i++) {
         particles.push({
           x: canvas.width / 2,
           y: canvas.height / 2,
           vx: (Math.random() - 0.5) * 16,
           vy: (Math.random() - 0.7) * 18,
-          size: Math.random() * 8 + 4,
+          size: Math.random() * 7 + 4,
           color: colors[Math.floor(Math.random() * colors.length)],
           angle: Math.random() * 360,
           spin: (Math.random() - 0.5) * 10
@@ -998,7 +1051,7 @@
         particles.forEach(p => {
           p.x += p.vx;
           p.y += p.vy;
-          p.vy += 0.25; // gravity
+          p.vy += 0.28;
           p.angle += p.spin;
           ctx.save();
           ctx.translate(p.x, p.y);
@@ -1007,36 +1060,31 @@
           ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
           ctx.restore();
         });
-
         frames++;
-        if (frames < 150) {
-          requestAnimationFrame(loop);
-        } else {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        if (frames < 140) requestAnimationFrame(loop);
+        else ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       loop();
     }
 
-    document.querySelectorAll('.num-btn').forEach(btn => {
+    // Keypad binding
+    document.querySelectorAll('.num-key').forEach(btn => {
       btn.addEventListener('click', () => {
-        const digit = parseInt(btn.dataset.digit, 10);
-        inputDigit(digit);
+        inputDigit(parseInt(btn.dataset.digit, 10));
       });
     });
 
+    // Memo toggle
     btnMemo.addEventListener('click', () => {
       isMemoMode = !isMemoMode;
       if (isMemoMode) {
-        btnMemo.classList.add('bg-indigo-950', 'border-indigo-500', 'text-indigo-300');
-        btnMemo.classList.remove('bg-slate-900', 'text-slate-400');
-        memoStatusDot.classList.replace('bg-slate-600', 'bg-indigo-400');
-        memoStatusText.textContent = 'メモ ON';
+        memoBadge.textContent = 'ON';
+        memoBadge.classList.replace('bg-slate-400', 'bg-blue-600');
+        btnMemo.classList.add('text-blue-600');
       } else {
-        btnMemo.classList.remove('bg-indigo-950', 'border-indigo-500', 'text-indigo-300');
-        btnMemo.classList.add('bg-slate-900', 'text-slate-400');
-        memoStatusDot.classList.replace('bg-indigo-400', 'bg-slate-600');
-        memoStatusText.textContent = 'メモ OFF';
+        memoBadge.textContent = 'OFF';
+        memoBadge.classList.replace('bg-blue-600', 'bg-slate-400');
+        btnMemo.classList.remove('text-blue-600');
       }
     });
 
@@ -1055,17 +1103,9 @@
       pauseModal.classList.add('hidden');
     });
 
-    diffSelect.addEventListener('change', (e) => {
-      startNewGame(e.target.value);
-    });
-
-    btnNewPuzzle.addEventListener('click', () => {
-      startNewGame(diffSelect.value);
-    });
-
-    btnNextPuzzle.addEventListener('click', () => {
-      startNewGame(diffSelect.value);
-    });
+    diffSelect.addEventListener('change', (e) => startNewGame(e.target.value));
+    btnNewGameTop.addEventListener('click', () => startNewGame(diffSelect.value));
+    btnNextPuzzle.addEventListener('click', () => startNewGame(diffSelect.value));
 
     btnRetryCurrent.addEventListener('click', () => {
       gameOverModal.classList.add('hidden');
@@ -1075,29 +1115,23 @@
       userGrid = initialClues.map(row => [...row]);
       pencilGrid = Array.from({ length: 81 }, () => new Set());
       undoStack = [];
-      updateMistakeUI();
+      updateMistakeBadge();
       timerDisplay.textContent = '00:00';
       refreshBoard();
       startTimer();
       saveActiveGame();
     });
 
-    btnNewFromGameOver.addEventListener('click', () => {
-      startNewGame(diffSelect.value);
-    });
+    btnNewFromGameOver.addEventListener('click', () => startNewGame(diffSelect.value));
 
-    // Hardware Keyboard shortcuts
+    // Keyboard support
     window.addEventListener('keydown', (e) => {
       if (isPaused || isGameOver || isGameWon) return;
-      if (e.key >= '1' && e.key <= '9') {
-        inputDigit(parseInt(e.key, 10));
-      } else if (e.key === 'Backspace' || e.key === 'Delete') {
-        executeErase();
-      } else if (e.key === 'm' || e.key === 'M') {
-        btnMemo.click();
-      } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
-        executeUndo();
-      } else if (selectedCellIndex !== null) {
+      if (e.key >= '1' && e.key <= '9') inputDigit(parseInt(e.key, 10));
+      else if (e.key === 'Backspace' || e.key === 'Delete') executeErase();
+      else if (e.key === 'm' || e.key === 'M') btnMemo.click();
+      else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) executeUndo();
+      else if (selectedCellIndex !== null) {
         const r = Math.floor(selectedCellIndex / 9);
         const c = selectedCellIndex % 9;
         if (e.key === 'ArrowUp' && r > 0) handleCellClick(selectedCellIndex - 9);
@@ -1107,10 +1141,15 @@
       }
     });
 
+    // Resize recalculation for SVG lines
+    window.addEventListener('resize', () => {
+      if (cages.length > 0) renderSvgCages();
+    });
+
     window.addEventListener('DOMContentLoaded', () => {
       buildBoardDOM();
       if (!loadActiveGame()) {
-        startNewGame('hard');
+        startNewGame('expert');
       }
     });
   </script>
