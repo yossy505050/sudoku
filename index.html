@@ -72,7 +72,7 @@
     }
     .top-controls {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       align-items: center;
     }
     select.diff-select {
@@ -84,6 +84,15 @@
       font-weight: 600;
       color: var(--text-main);
       outline: none;
+    }
+    .icon-header-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* Status Bar */
@@ -100,7 +109,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      min-width: 60px;
+      min-width: 55px;
     }
     .status-item span.val {
       font-size: 0.95rem;
@@ -224,10 +233,9 @@
       z-index: 2;
     }
 
-    /* 合計値のあるマスは上部にマージンを設けて候補値「1」との重なりを防止 */
     .cell.has-sum .notes-grid {
       inset: 0px 2px 2px 2px;
-      padding-top: 13px;
+      padding-top: 13px; /* 合計値ラベル直下へ押し下げ */
     }
 
     .note-item {
@@ -301,7 +309,7 @@
       background: #10b981;
     }
 
-    /* Keypad (1 to 9) */
+    /* Keypad */
     .keypad-container {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
@@ -312,8 +320,8 @@
       background: #ffffff;
       border: 1px solid #d4deec;
       border-radius: 8px;
-      padding: 10px 0;
-      font-size: 1.65rem;
+      padding: 8px 0;
+      font-size: 1.6rem;
       font-weight: 600;
       color: var(--primary);
       display: flex;
@@ -322,12 +330,28 @@
       justify-content: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.03);
       cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
     }
     .key-btn:active {
       background: var(--primary-light);
     }
+    /* 9個すべて使用済みの数字ボタンスタイル */
+    .key-btn.completed {
+      opacity: 0.28;
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+    .key-count {
+      font-size: 0.6rem;
+      color: var(--text-sub);
+      font-weight: 500;
+      margin-top: 2px;
+    }
 
-    /* Overlay Modal */
+    /* Overlay Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -355,12 +379,12 @@
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
     }
     .modal-card h2 {
-      font-size: 1.35rem;
-      margin-bottom: 8px;
+      font-size: 1.25rem;
+      margin-bottom: 12px;
     }
     .modal-card p {
       color: var(--text-sub);
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       margin-bottom: 20px;
       line-height: 1.4;
     }
@@ -374,6 +398,66 @@
       font-size: 0.95rem;
       width: 100%;
       cursor: pointer;
+    }
+
+    /* Settings List */
+    .settings-list {
+      text-align: left;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .setting-item span.sub {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-sub);
+      font-weight: 400;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #cbd5e1;
+      transition: .2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
     }
   </style>
 </head>
@@ -392,8 +476,11 @@
         <option value="expert" selected>エキスパート</option>
         <option value="master">マスター (極)</option>
       </select>
-      <button class="act-btn" onclick="startNewGame(true)" style="gap:0;">
+      <button class="icon-header-btn" onclick="startNewGame(true)" title="新しい問題">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+      </button>
+      <button class="icon-header-btn" onclick="openSettings()" title="設定">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
     </div>
   </div>
@@ -404,7 +491,7 @@
       <span>難易度</span>
       <span class="val" id="dispDiff">エキスパート</span>
     </div>
-    <div class="status-item mistakes">
+    <div class="status-item mistakes" id="mistakesContainer">
       <span>間違い</span>
       <span class="val" id="dispMistakes">0/3</span>
     </div>
@@ -462,7 +549,60 @@
   <div class="keypad-container" id="keypad"></div>
 </div>
 
-<!-- Modal Overlays -->
+<!-- Settings Modal -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-card">
+    <h2>ゲーム設定</h2>
+    <div class="settings-list">
+      <div class="setting-item">
+        <div>
+          メモの自動消去
+          <span class="sub">確定時に関連マスの候補値を消去</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="setOptAutoEraseNotes" onchange="updateSetting('autoEraseNotes', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          完了した数字の非表示
+          <span class="sub">9個使い切ったテンキーを淡色化</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="setOptDimCompletedKeys" onchange="updateSetting('dimCompletedKeys', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          ミス警告 & 3ライフ制
+          <span class="sub">即座に判定し3回ミスで終了</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="setOptCheckMistakes" onchange="updateSetting('checkMistakes', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
+        <div>
+          強調ハイライト
+          <span class="sub">同数字・同ケージ・関連行を強調</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="setOptHighlightPeers" onchange="updateSetting('highlightPeers', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    <button class="modal-btn" onclick="closeSettings()">閉じる</button>
+  </div>
+</div>
+
+<!-- Loading & State Modals -->
 <div class="modal-overlay" id="loadingModal">
   <div class="modal-card">
     <h2>パズルを生成中...</h2>
@@ -487,6 +627,16 @@
 </div>
 
 <script>
+  /* --- Game Settings Configuration --- */
+  const SETTINGS_KEY = 'killer_sudoku_settings_v1';
+  let settings = {
+    autoEraseNotes: true,   // メモ自動消去 (デフォルトON)
+    dimCompletedKeys: true, // 9個完了テンキー淡色化 (デフォルトON)
+    checkMistakes: true,    // 即時ミス＆3ライフ制 (デフォルトON)
+    highlightPeers: true    // 関連マス・同数字強調 (デフォルトON)
+  };
+
+  /* --- Game State Variables --- */
   let currentDifficulty = 'expert';
   let solution = [];
   let userGrid = [];
@@ -501,9 +651,10 @@
   let elapsedSeconds = 0;
   let undoStack = [];
 
-  const STORAGE_KEY = 'killer_sudoku_active_game_v3';
+  const STORAGE_KEY = 'killer_sudoku_active_game_v4';
 
   window.addEventListener('DOMContentLoaded', () => {
+    loadSettings();
     buildKeypad();
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -517,18 +668,75 @@
     }
   });
 
+  function loadSettings() {
+    const s = localStorage.getItem(SETTINGS_KEY);
+    if (s) {
+      try { settings = { ...settings, ...JSON.parse(s) }; } catch(e){}
+    }
+    document.getElementById('setOptAutoEraseNotes').checked = settings.autoEraseNotes;
+    document.getElementById('setOptDimCompletedKeys').checked = settings.dimCompletedKeys;
+    document.getElementById('setOptCheckMistakes').checked = settings.checkMistakes;
+    document.getElementById('setOptHighlightPeers').checked = settings.highlightPeers;
+    updateMistakesVisibility();
+  }
+
+  function updateSetting(key, val) {
+    settings[key] = val;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    updateMistakesVisibility();
+    updateKeypadCounts();
+    updateHighlights();
+  }
+
+  function updateMistakesVisibility() {
+    const c = document.getElementById('mistakesContainer');
+    c.style.visibility = settings.checkMistakes ? 'visible' : 'hidden';
+  }
+
+  function openSettings() {
+    document.getElementById('settingsModal').classList.add('show');
+  }
+  function closeSettings() {
+    document.getElementById('settingsModal').classList.remove('show');
+  }
+
   function buildKeypad() {
     const pad = document.getElementById('keypad');
     pad.innerHTML = '';
     for (let i = 1; i <= 9; i++) {
       const btn = document.createElement('div');
       btn.className = 'key-btn';
-      btn.innerText = i;
+      btn.id = `keyBtn-${i}`;
+      btn.innerHTML = `<span>${i}</span><span class="key-count" id="keyCount-${i}"></span>`;
       btn.onpointerdown = (e) => {
         e.preventDefault();
         onNumberInput(i);
       };
       pad.appendChild(btn);
+    }
+  }
+
+  function updateKeypadCounts() {
+    const counts = Array(10).fill(0);
+    for (let i = 0; i < 81; i++) {
+      if (userGrid[i] >= 1 && userGrid[i] <= 9) {
+        counts[userGrid[i]]++;
+      }
+    }
+
+    for (let n = 1; n <= 9; n++) {
+      const btn = document.getElementById(`keyBtn-${n}`);
+      const countEl = document.getElementById(`keyCount-${n}`);
+      if (!btn) continue;
+
+      const placed = counts[n];
+      if (settings.dimCompletedKeys && placed >= 9) {
+        btn.classList.add('completed');
+        countEl.innerText = '✔';
+      } else {
+        btn.classList.remove('completed');
+        countEl.innerText = `${placed}/9`;
+      }
     }
   }
 
@@ -550,7 +758,7 @@
     }
   }
 
-  /* --- Sudoku & Unique Killer Puzzle Generator --- */
+  /* --- Unique Solution Killer Puzzle Generator Engine --- */
   function generateFullSudoku() {
     const board = Array(81).fill(0);
     const nums = [1,2,3,4,5,6,7,8,9];
@@ -631,23 +839,18 @@
     return cageList;
   }
 
-  /* --- 唯一解（別解が存在しないか）の高速検証ソルバー --- */
   function countKillerSolutions(cageList, givenGrid, maxCount = 2) {
     const board = [...givenGrid];
     const cellMap = {};
     cageList.forEach(cg => cg.cells.forEach(idx => cellMap[idx] = cg));
-
     let solutions = 0;
 
     function canPlace(idx, val) {
       const r = Math.floor(idx / 9);
       const c = idx % 9;
-
-      // 行・列チェック
       for (let i = 0; i < 9; i++) {
         if (board[r * 9 + i] === val || board[i * 9 + c] === val) return false;
       }
-      // 3x3ブロックチェック
       const br = Math.floor(r / 3) * 3;
       const bc = Math.floor(c / 3) * 3;
       for (let dr = 0; dr < 3; dr++) {
@@ -655,26 +858,20 @@
           if (board[(br + dr) * 9 + (bc + dc)] === val) return false;
         }
       }
-
-      // ケージ制約チェック
       const cg = cellMap[idx];
       let sum = val;
       let filled = 1;
       for (let ci of cg.cells) {
         if (ci !== idx) {
-          if (board[ci] === val) return false; // 重複NG
+          if (board[ci] === val) return false;
           if (board[ci] !== 0) {
             sum += board[ci];
             filled++;
           }
         }
       }
-
-      // ケージ合計を超過したらNG
       if (sum > cg.sum) return false;
-      // ケージ全マス埋まったのに合計が合わなければNG
       if (filled === cg.cells.length && sum !== cg.sum) return false;
-
       return true;
     }
 
@@ -688,7 +885,6 @@
         search(cellIdx + 1);
         return;
       }
-
       for (let num = 1; num <= 9; num++) {
         if (canPlace(cellIdx, num)) {
           board[cellIdx] = num;
@@ -703,7 +899,7 @@
     return solutions;
   }
 
-  /* --- Game Startup with Uniqueness Guarantee --- */
+  /* --- Game Startup --- */
   function startNewGame(isNewPuzzle = true) {
     clearInterval(timerInterval);
     document.getElementById('loadingModal').classList.add('show');
@@ -733,9 +929,7 @@
             }
           }
 
-          // 唯一解（別解がゼロ、解がちょうど1通り）であるか厳密テスト
-          const solCount = countKillerSolutions(candCages, candInitial, 2);
-          if (solCount === 1) {
+          if (countKillerSolutions(candCages, candInitial, 2) === 1) {
             solution = candSolution;
             cages = candCages;
             initialGrid = candInitial;
@@ -743,12 +937,10 @@
           }
         }
 
-        // 極稀に規定回数内に100%一意解が取れなかった場合の安全なフォールバック
         if (!isUnique) {
           solution = generateFullSudoku();
           cages = buildKillerCages(solution, currentDifficulty);
           initialGrid = Array(81).fill(0);
-          // 念のため2箇所ヒントを入れて一意性を担保
           initialGrid[0] = solution[0];
           initialGrid[80] = solution[80];
         }
@@ -767,6 +959,7 @@
       updateStatusHeader();
       renderBoard();
       drawCagesSVG();
+      updateKeypadCounts();
       startTimer();
       saveGame();
 
@@ -907,22 +1100,26 @@
     }
 
     cells.forEach((c, idx) => {
+      if (idx === selectedCell) {
+        c.classList.add('selected');
+        return;
+      }
+      if (!settings.highlightPeers) return;
+
       const r = Math.floor(idx / 9);
       const col = idx % 9;
       const isPeer = (r === selR || col === selC || (cg && cg.cells.includes(idx)));
 
-      if (idx === selectedCell) {
-        c.classList.add('selected');
-      } else if (isPeer) {
+      if (isPeer) {
         c.classList.add('highlight-peer');
       }
-
       if (selVal !== 0 && userGrid[idx] === selVal) {
         c.classList.add('highlight-same-num');
       }
     });
   }
 
+  /* --- Input & Auto Erase Logic --- */
   function onNumberInput(num) {
     if (selectedCell === null || initialGrid[selectedCell] !== 0) return;
 
@@ -940,7 +1137,8 @@
       return;
     }
 
-    if (solution[selectedCell] !== num) {
+    // ミス判定ONの場合の即時チェック
+    if (settings.checkMistakes && solution[selectedCell] !== num) {
       mistakes++;
       updateStatusHeader();
       const cellEl = document.querySelector(`.cell[data-idx="${selectedCell}"]`);
@@ -956,6 +1154,7 @@
       return;
     }
 
+    // 正解入力の反映
     undoStack.push({
       idx: selectedCell,
       prevVal: userGrid[selectedCell],
@@ -965,21 +1164,33 @@
     userGrid[selectedCell] = num;
     delete notes[selectedCell];
 
-    const cg = cellCageMap[selectedCell];
-    const r = Math.floor(selectedCell / 9);
-    const c = selectedCell % 9;
-    for (let i = 0; i < 81; i++) {
-      const ir = Math.floor(i / 9);
-      const ic = i % 9;
-      if (ir === r || ic === c || (cg && cg.cells.includes(i))) {
-        if (notes[i]) {
-          notes[i] = notes[i].filter(n => n !== num);
+    // 【重要】設定がONの場合：所属行・列・3×3ブロック・ケージから候補値メモを自動消去
+    if (settings.autoEraseNotes) {
+      const cg = cellCageMap[selectedCell];
+      const r = Math.floor(selectedCell / 9);
+      const c = selectedCell % 9;
+      const br = Math.floor(r / 3) * 3;
+      const bc = Math.floor(c / 3) * 3;
+
+      for (let i = 0; i < 81; i++) {
+        const ir = Math.floor(i / 9);
+        const ic = i % 9;
+        const inSameRow = (ir === r);
+        const inSameCol = (ic === c);
+        const inSameBlock = (ir >= br && ir < br + 3 && ic >= bc && ic < bc + 3);
+        const inSameCage = (cg && cg.cells.includes(i));
+
+        if (inSameRow || inSameCol || inSameBlock || inSameCage) {
+          if (notes[i]) {
+            notes[i] = notes[i].filter(n => n !== num);
+          }
         }
       }
     }
 
     renderBoard();
     updateHighlights();
+    updateKeypadCounts();
     saveGame();
     checkWinCondition();
   }
@@ -996,6 +1207,7 @@
       delete notes[selectedCell];
       renderBoard();
       updateHighlights();
+      updateKeypadCounts();
       saveGame();
     }
   }
@@ -1012,6 +1224,7 @@
     selectedCell = last.idx;
     renderBoard();
     updateHighlights();
+    updateKeypadCounts();
     saveGame();
   }
 
@@ -1057,6 +1270,7 @@
     document.getElementById('dispDiff').innerText = diffNames[currentDifficulty];
     document.getElementById('dispMistakes').innerText = `${mistakes}/3`;
     document.getElementById('diffSelect').value = currentDifficulty;
+    updateMistakesVisibility();
   }
 
   function saveGame() {
@@ -1089,6 +1303,7 @@
     updateStatusHeader();
     renderBoard();
     drawCagesSVG();
+    updateKeypadCounts();
     startTimer();
   }
 </script>
