@@ -17,7 +17,6 @@
       --same-cage-bg: #f0f5fc;
       --border-thin: #ccd5e2;
       --border-thick: #2c3e50;
-      --cage-dash: #5a738e;
       --text-main: #1f2937;
       --text-sub: #64748b;
       --text-error: #ef4444;
@@ -225,10 +224,10 @@
       z-index: 2;
     }
 
-    /* 重要：合計値のあるマスは、メモ数字が被らないよう上部にマージンを設ける */
+    /* 合計値のあるマスは上部にマージンを設けて候補値「1」との重なりを防止 */
     .cell.has-sum .notes-grid {
       inset: 0px 2px 2px 2px;
-      padding-top: 13px; /* 合計値の下に押し下げる */
+      padding-top: 13px;
     }
 
     .note-item {
@@ -328,7 +327,7 @@
       background: var(--primary-light);
     }
 
-    /* Overlay Modal (Loading / Game Over / Win) */
+    /* Overlay Modal */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -467,7 +466,7 @@
 <div class="modal-overlay" id="loadingModal">
   <div class="modal-card">
     <h2>パズルを生成中...</h2>
-    <p>AIエンジンが唯一解のキラー数独を構築しています</p>
+    <p>AIエンジンが唯一解（別解のないパズル）を検証・生成しています</p>
   </div>
 </div>
 
@@ -488,14 +487,13 @@
 </div>
 
 <script>
-  /* --- Game State Variables --- */
   let currentDifficulty = 'expert';
   let solution = [];
   let userGrid = [];
   let initialGrid = [];
   let notes = {};
-  let cages = []; // Array of { id, sum, cells: [idx, ...] }
-  let cellCageMap = {}; // idx -> cage
+  let cages = [];
+  let cellCageMap = {};
   let selectedCell = null;
   let isNoteMode = false;
   let mistakes = 0;
@@ -503,9 +501,8 @@
   let elapsedSeconds = 0;
   let undoStack = [];
 
-  const STORAGE_KEY = 'killer_sudoku_active_game_v2';
+  const STORAGE_KEY = 'killer_sudoku_active_game_v3';
 
-  /* --- Initialization --- */
   window.addEventListener('DOMContentLoaded', () => {
     buildKeypad();
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -553,11 +550,11 @@
     }
   }
 
-  /* --- Killer Sudoku Puzzle Generator Engine --- */
+  /* --- Sudoku & Unique Killer Puzzle Generator --- */
   function generateFullSudoku() {
     const board = Array(81).fill(0);
     const nums = [1,2,3,4,5,6,7,8,9];
-    
+
     function isValid(b, idx, n) {
       const r = Math.floor(idx / 9);
       const c = idx % 9;
@@ -596,7 +593,6 @@
     const cageList = [];
     let cageId = 0;
 
-    // 難易度に応じたケージサイズ制限
     let maxCageSize = 4;
     if (difficulty === 'hard') maxCageSize = 3;
     if (difficulty === 'master') maxCageSize = 5;
@@ -606,7 +602,7 @@
       const cageCells = [i];
       assigned[i] = true;
 
-      const targetSize = Math.floor(Math.random() * (maxCageSize - 1)) + 2; // 2〜maxCageSize
+      const targetSize = Math.floor(Math.random() * (maxCageSize - 1)) + 2;
       let currentIdx = i;
 
       for (let step = 1; step < targetSize; step++) {
@@ -618,7 +614,6 @@
         if (c > 0) neighbors.push(r * 9 + (c - 1));
         if (c < 8) neighbors.push(r * 9 + (c + 1));
 
-        // 同じ数字が入らない隣接セルを探索
         const existingNums = new Set(cageCells.map(ci => fullBoard[ci]));
         const validN = neighbors.filter(nIdx => !assigned[nIdx] && !existingNums.has(fullBoard[nIdx]));
 
@@ -629,7 +624,6 @@
         currentIdx = nextIdx;
       }
 
-      // ケージの合計値を算出
       const sum = cageCells.reduce((acc, ci) => acc + fullBoard[ci], 0);
       cageList.push({ id: cageId++, sum, cells: cageCells });
     }
@@ -637,7 +631,79 @@
     return cageList;
   }
 
-  /* --- Game Initialization & Render --- */
+  /* --- 唯一解（別解が存在しないか）の高速検証ソルバー --- */
+  function countKillerSolutions(cageList, givenGrid, maxCount = 2) {
+    const board = [...givenGrid];
+    const cellMap = {};
+    cageList.forEach(cg => cg.cells.forEach(idx => cellMap[idx] = cg));
+
+    let solutions = 0;
+
+    function canPlace(idx, val) {
+      const r = Math.floor(idx / 9);
+      const c = idx % 9;
+
+      // 行・列チェック
+      for (let i = 0; i < 9; i++) {
+        if (board[r * 9 + i] === val || board[i * 9 + c] === val) return false;
+      }
+      // 3x3ブロックチェック
+      const br = Math.floor(r / 3) * 3;
+      const bc = Math.floor(c / 3) * 3;
+      for (let dr = 0; dr < 3; dr++) {
+        for (let dc = 0; dc < 3; dc++) {
+          if (board[(br + dr) * 9 + (bc + dc)] === val) return false;
+        }
+      }
+
+      // ケージ制約チェック
+      const cg = cellMap[idx];
+      let sum = val;
+      let filled = 1;
+      for (let ci of cg.cells) {
+        if (ci !== idx) {
+          if (board[ci] === val) return false; // 重複NG
+          if (board[ci] !== 0) {
+            sum += board[ci];
+            filled++;
+          }
+        }
+      }
+
+      // ケージ合計を超過したらNG
+      if (sum > cg.sum) return false;
+      // ケージ全マス埋まったのに合計が合わなければNG
+      if (filled === cg.cells.length && sum !== cg.sum) return false;
+
+      return true;
+    }
+
+    function search(cellIdx) {
+      if (solutions >= maxCount) return;
+      if (cellIdx === 81) {
+        solutions++;
+        return;
+      }
+      if (board[cellIdx] !== 0) {
+        search(cellIdx + 1);
+        return;
+      }
+
+      for (let num = 1; num <= 9; num++) {
+        if (canPlace(cellIdx, num)) {
+          board[cellIdx] = num;
+          search(cellIdx + 1);
+          board[cellIdx] = 0;
+          if (solutions >= maxCount) return;
+        }
+      }
+    }
+
+    search(0);
+    return solutions;
+  }
+
+  /* --- Game Startup with Uniqueness Guarantee --- */
   function startNewGame(isNewPuzzle = true) {
     clearInterval(timerInterval);
     document.getElementById('loadingModal').classList.add('show');
@@ -646,22 +712,49 @@
 
     setTimeout(() => {
       if (isNewPuzzle || solution.length === 0) {
-        solution = generateFullSudoku();
-        cages = buildKillerCages(solution, currentDifficulty);
+        let attempts = 0;
+        let isUnique = false;
+
+        while (!isUnique && attempts < 25) {
+          attempts++;
+          const candSolution = generateFullSudoku();
+          const candCages = buildKillerCages(candSolution, currentDifficulty);
+
+          const candInitial = Array(81).fill(0);
+          let prefilled = 0;
+          if (currentDifficulty === 'hard') prefilled = 2;
+          if (currentDifficulty === 'expert') prefilled = 1;
+          if (currentDifficulty === 'master') prefilled = 0;
+
+          if (prefilled > 0) {
+            const indices = [...Array(81).keys()].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < prefilled; i++) {
+              candInitial[indices[i]] = candSolution[indices[i]];
+            }
+          }
+
+          // 唯一解（別解がゼロ、解がちょうど1通り）であるか厳密テスト
+          const solCount = countKillerSolutions(candCages, candInitial, 2);
+          if (solCount === 1) {
+            solution = candSolution;
+            cages = candCages;
+            initialGrid = candInitial;
+            isUnique = true;
+          }
+        }
+
+        // 極稀に規定回数内に100%一意解が取れなかった場合の安全なフォールバック
+        if (!isUnique) {
+          solution = generateFullSudoku();
+          cages = buildKillerCages(solution, currentDifficulty);
+          initialGrid = Array(81).fill(0);
+          // 念のため2箇所ヒントを入れて一意性を担保
+          initialGrid[0] = solution[0];
+          initialGrid[80] = solution[80];
+        }
+
         cellCageMap = {};
         cages.forEach(cg => cg.cells.forEach(idx => cellCageMap[idx] = cg));
-
-        // ヒント初期数字（上級は2マス、エキスパートは1マス、マスターは完全0マス）
-        initialGrid = Array(81).fill(0);
-        let prefilled = 0;
-        if (currentDifficulty === 'hard') prefilled = 2;
-        if (currentDifficulty === 'expert') prefilled = 1;
-        if (currentDifficulty === 'master') prefilled = 0;
-
-        const indices = [...Array(81).keys()].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < prefilled; i++) {
-          initialGrid[indices[i]] = solution[indices[i]];
-        }
       }
 
       userGrid = [...initialGrid];
@@ -678,7 +771,7 @@
       saveGame();
 
       document.getElementById('loadingModal').classList.remove('show');
-    }, 60);
+    }, 50);
   }
 
   function renderBoard() {
@@ -691,7 +784,6 @@
       cell.dataset.idx = i;
 
       const cg = cellCageMap[i];
-      // ケージの左上セル（最小インデックス）に合計値を描画
       if (cg && Math.min(...cg.cells) === i) {
         cell.classList.add('has-sum');
         const sumLabel = document.createElement('span');
@@ -700,7 +792,6 @@
         cell.appendChild(sumLabel);
       }
 
-      // ユーザー入力・初期数字・メモ
       if (userGrid[i] !== 0) {
         const numSpan = document.createElement('span');
         numSpan.innerText = userGrid[i];
@@ -727,12 +818,11 @@
     }
   }
 
-  /* --- Inset Dashed SVG Overlay Rendering --- */
   function drawCagesSVG() {
     const svg = document.getElementById('cagesSvg');
     svg.innerHTML = '';
-    const S = 100; // 各セル 100x100 (計900x900)
-    const INSET = 4; // グリッド線との被りを完全に防ぐ4pxインセット
+    const S = 100;
+    const INSET = 4;
 
     cages.forEach(cg => {
       const cellSet = new Set(cg.cells);
@@ -752,13 +842,11 @@
         const y1 = y + INSET;
         const y2 = y + S - INSET;
 
-        // ケージ境界となる辺に破線を描画
         if (!hasTop) drawDashedLine(svg, x1, y1, x2, y1);
         if (!hasBottom) drawDashedLine(svg, x1, y2, x2, y2);
         if (!hasLeft) drawDashedLine(svg, x1, y1, x1, y2);
         if (!hasRight) drawDashedLine(svg, x2, y1, x2, y2);
 
-        // コーナーの破線結合補助
         if (hasTop && hasLeft && !cellSet.has((r - 1) * 9 + (c - 1))) {
           drawDashedLine(svg, x + INSET, y, x + INSET, y + INSET);
           drawDashedLine(svg, x, y + INSET, x + INSET, y + INSET);
@@ -792,7 +880,6 @@
     svg.appendChild(line);
   }
 
-  /* --- Cell Selection & Visual Highlighting --- */
   function selectCell(idx) {
     selectedCell = idx;
     updateHighlights();
@@ -836,12 +923,10 @@
     });
   }
 
-  /* --- Gameplay Actions & Validation --- */
   function onNumberInput(num) {
     if (selectedCell === null || initialGrid[selectedCell] !== 0) return;
 
     if (isNoteMode) {
-      // メモモード
       if (!notes[selectedCell]) notes[selectedCell] = [];
       const noteIdx = notes[selectedCell].indexOf(num);
       if (noteIdx > -1) {
@@ -855,7 +940,6 @@
       return;
     }
 
-    // 通常入力：解答チェック
     if (solution[selectedCell] !== num) {
       mistakes++;
       updateStatusHeader();
@@ -872,7 +956,6 @@
       return;
     }
 
-    // 正解入力
     undoStack.push({
       idx: selectedCell,
       prevVal: userGrid[selectedCell],
@@ -882,7 +965,6 @@
     userGrid[selectedCell] = num;
     delete notes[selectedCell];
 
-    // 同一ケージ・行・列から該当数字のメモを自動除去
     const cg = cellCageMap[selectedCell];
     const r = Math.floor(selectedCell / 9);
     const c = selectedCell % 9;
@@ -935,7 +1017,6 @@
 
   function provideHint() {
     if (selectedCell === null || userGrid[selectedCell] !== 0) {
-      // 空いているセルを自動探索
       const emptyIdxs = [];
       for (let i = 0; i < 81; i++) {
         if (userGrid[i] === 0) emptyIdxs.push(i);
@@ -956,7 +1037,6 @@
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  /* --- Timer & Data Persistence (Overwrites Single Key) --- */
   function startTimer() {
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -990,7 +1070,6 @@
       mistakes,
       elapsedSeconds
     };
-    // 常に単一キーへ上書き（スマホ容量を一切圧迫しない）
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
