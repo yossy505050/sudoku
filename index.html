@@ -3,64 +3,144 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>キラーナンプレ - Killer Sudoku</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
-  
+  <title>キラーナンプレ</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#ffffff">
   <style>
+    :root {
+      --bg-color: #f7f9fd;
+      --card-bg: #ffffff;
+      --primary: #2d68c4;
+      --primary-light: #e8f0fe;
+      --primary-selected: #b8d4fe;
+      --same-cage-bg: #f0f5fc;
+      --border-thin: #ccd5e2;
+      --border-thick: #2c3e50;
+      --cage-dash: #5a738e;
+      --text-main: #1f2937;
+      --text-sub: #64748b;
+      --text-error: #ef4444;
+      --text-note: #475569;
+    }
+
     * {
-      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
       touch-action: manipulation;
-      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     }
+
     body {
-      font-family: 'Public Sans', 'M PLUS Rounded 1c', -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #f7f9fc;
-      color: #1e293b;
-      min-height: 100dvh;
+      background-color: var(--bg-color);
+      color: var(--text-main);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
       overflow-x: hidden;
-      padding-bottom: env(safe-area-inset-bottom, 10px);
-      padding-top: env(safe-area-inset-top, 6px);
     }
 
-    /* Board container with crisp borders */
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      padding: env(safe-area-inset-top, 10px) 12px env(safe-area-inset-bottom, 12px) 12px;
+      justify-content: space-between;
+    }
+
+    /* Top Navigation / Header */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 4px 10px 4px;
+    }
+    .top-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .top-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    select.diff-select {
+      background: #ffffff;
+      border: 1px solid var(--border-thin);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-main);
+      outline: none;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 4px 10px 4px;
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      font-weight: 500;
+    }
+    .status-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 60px;
+    }
+    .status-item span.val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-top: 2px;
+    }
+    .status-item.mistakes span.val {
+      color: var(--text-error);
+    }
+
+    /* Sudoku Board Wrapper */
+    .board-wrapper {
+      width: 100%;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+    }
+
     .board-container {
       width: 100%;
-      max-width: 410px;
-      margin: 0 auto;
       aspect-ratio: 1 / 1;
-      background: #ffffff;
-      border: 2px solid #1e293b;
       position: relative;
-      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06);
+      background: #ffffff;
+      border: 2px solid var(--border-thick);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
     }
 
-    /* SVG Layer covering the entire board for inset dashed cages */
-    .cage-svg-layer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .sudoku-grid {
+    .grid-cells {
       display: grid;
       grid-template-columns: repeat(9, 1fr);
       grid-template-rows: repeat(9, 1fr);
       width: 100%;
       height: 100%;
-      position: relative;
-      z-index: 1;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
 
     .cell {
@@ -68,1090 +148,870 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: #ffffff;
-      border-right: 1px solid #e2e8f0;
-      border-bottom: 1px solid #e2e8f0;
+      border-right: 1px solid var(--border-thin);
+      border-bottom: 1px solid var(--border-thin);
+      font-size: 1.55rem;
+      font-weight: 500;
+      color: var(--primary);
       cursor: pointer;
-      transition: background-color 0.1s ease;
+      background-color: #ffffff;
+      transition: background-color 0.08s ease;
     }
-
-    /* 3x3 block separation */
     .cell:nth-child(3n) {
-      border-right: 2px solid #1e293b;
+      border-right: 2px solid var(--border-thick);
     }
     .cell:nth-child(9n) {
       border-right: none;
     }
-    .cell.block-bottom {
-      border-bottom: 2px solid #1e293b;
+    .cell:nth-child(n+19):nth-child(-n+27),
+    .cell:nth-child(n+46):nth-child(-n+54) {
+      border-bottom: 2px solid var(--border-thick);
     }
-    .cell.grid-bottom {
+    .cell:nth-child(n+73):nth-child(-n+81) {
       border-bottom: none;
     }
 
-    /* Cell Colors like Sudoku.com */
-    .cell-selected {
-      background-color: #bbdefb !important; /* Vivid soft blue */
+    /* Highlighting */
+    .cell.highlight-peer {
+      background-color: var(--same-cage-bg);
     }
-    .cell-related {
-      background-color: #edf5fc !important; /* Gentle peer tint */
+    .cell.highlight-same-num {
+      background-color: #dbe7fa;
     }
-    .cell-same-number {
-      background-color: #d1e8fc !important;
+    .cell.selected {
+      background-color: var(--primary-selected) !important;
     }
-
-    .cage-sum-text {
-      font-family: 'Public Sans', sans-serif;
-      font-size: clamp(8.5px, 2.4vw, 11px);
+    .cell.error {
+      background-color: #fee2e2 !important;
+      color: var(--text-error) !important;
+    }
+    .cell.fixed {
+      color: #1e293b;
       font-weight: 700;
-      fill: #334155;
     }
 
-    .cage-stroke {
-      stroke: #64748b;
-      stroke-width: 1.25;
-      stroke-dasharray: 3.5, 2.5;
-      stroke-linecap: round;
-      fill: none;
-    }
-
-    .cell-number {
-      font-size: clamp(1.4rem, 6vw, 1.95rem);
-      font-weight: 600;
+    /* Cage Sum Label */
+    .cage-sum {
+      position: absolute;
+      top: 2px;
+      left: 3px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #334155;
       line-height: 1;
-      z-index: 5;
-    }
-    .user-val { color: #1d4ed8; } /* Bright clean blue */
-    .clue-val { color: #0f172a; font-weight: 700; }
-    .wrong-val { 
-      color: #ef4444 !important; 
-      animation: cellShake 0.28s ease;
-    }
-
-    /* Pencil notes */
-    .note-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      width: 100%;
-      height: 100%;
-      padding: 3px;
       pointer-events: none;
       z-index: 5;
     }
-    .note-digit {
+
+    /* Cage Dashed Borders SVG Overlay */
+    .cages-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /* Notes / Candidates (3x3 Subgrid) */
+    .notes-grid {
+      position: absolute;
+      inset: 2px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* 重要：合計値のあるマスは、メモ数字が被らないよう上部にマージンを設ける */
+    .cell.has-sum .notes-grid {
+      inset: 0px 2px 2px 2px;
+      padding-top: 13px; /* 合計値の下に押し下げる */
+    }
+
+    .note-item {
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(8px, 2.2vw, 10px);
-      font-weight: 700;
-      color: #64748b;
+      font-size: 0.62rem;
+      color: var(--text-note);
+      font-weight: 600;
       line-height: 1;
     }
 
-    @keyframes cellShake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-3px); }
-      75% { transform: translateX(3px); }
+    /* Action Controls Bar */
+    .actions-bar {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 10px 0 6px 0;
+    }
+    .act-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      gap: 4px;
+      outline: none;
+    }
+    .act-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid #dbe3ed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background 0.1s ease;
+    }
+    .act-btn:active .act-icon {
+      background: var(--primary-light);
+    }
+    .act-btn.active .act-icon {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    .act-btn.active .act-icon svg {
+      stroke: #ffffff;
+    }
+    .act-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+    .badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.58rem;
+      font-weight: 700;
+      border-radius: 8px;
+      padding: 1px 4px;
+    }
+    .act-btn.active .badge {
+      background: #10b981;
     }
 
-    .btn-touch {
-      transition: transform 0.08s ease, filter 0.08s ease;
+    /* Keypad (1 to 9) */
+    .keypad-container {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 4px;
+      padding: 6px 0 12px 0;
     }
-    .btn-touch:active {
-      transform: scale(0.93);
-      filter: brightness(0.92);
+    .key-btn {
+      background: #ffffff;
+      border: 1px solid #d4deec;
+      border-radius: 8px;
+      padding: 10px 0;
+      font-size: 1.65rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+      cursor: pointer;
+    }
+    .key-btn:active {
+      background: var(--primary-light);
+    }
+
+    /* Overlay Modal (Loading / Game Over / Win) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      width: 88%;
+      max-width: 320px;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+    }
+    .modal-card h2 {
+      font-size: 1.35rem;
+      margin-bottom: 8px;
+    }
+    .modal-card p {
+      color: var(--text-sub);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+    .modal-btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      width: 100%;
+      cursor: pointer;
     }
   </style>
 </head>
-<body class="px-2.5 sm:px-4 max-w-md mx-auto">
+<body>
 
-  <!-- Top App Navigation -->
-  <header class="w-full flex items-center justify-between pt-1 pb-2 border-b border-slate-200/80">
-    <div class="flex items-center gap-1.5">
-      <button id="btnBackMenu" class="text-slate-500 hover:text-slate-800 p-1 -ml-1">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-      </button>
-      <div>
-        <h1 class="text-base sm:text-lg font-black text-slate-800 tracking-tight leading-tight">キラーナンプレ</h1>
-        <p class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">AI Unlimited Engine</p>
-      </div>
+<div class="app-container">
+  <!-- Top Bar -->
+  <div class="top-bar">
+    <div class="top-title">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M2 12h20M4 4l16 16M4 20L20 4"/></svg>
+      キラーナンプレ
     </div>
-
-    <!-- Quick tier change & new game -->
-    <div class="flex items-center gap-2">
-      <select id="diffSelect" class="bg-white border border-slate-300 text-slate-700 text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none shadow-sm focus:border-blue-500">
+    <div class="top-controls">
+      <select id="diffSelect" class="diff-select" onchange="changeDifficulty(this.value)">
         <option value="hard">上級</option>
         <option value="expert" selected>エキスパート</option>
-        <option value="master">極・マスター</option>
+        <option value="master">マスター (極)</option>
       </select>
-      <button id="btnNewGameTop" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-sm btn-touch flex items-center gap-1">
-        <svg id="genSpinIcon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-        <span>生成</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Top Status Stats (難易度 / 間違い / タイム) matching Sudoku.com -->
-  <section class="w-full grid grid-cols-3 text-center py-2.5 px-1 items-center">
-    <div>
-      <span class="block text-[11px] font-bold text-slate-400">難易度</span>
-      <span id="labelTier" class="text-sm font-bold text-slate-700">エキスパート</span>
-    </div>
-    <div>
-      <span class="block text-[11px] font-bold text-slate-400">間違い</span>
-      <span id="mistakeBadge" class="text-sm font-bold text-slate-700 tracking-wide">0/3</span>
-    </div>
-    <div class="flex items-center justify-center gap-1.5">
-      <div>
-        <span class="block text-[11px] font-bold text-slate-400">タイム</span>
-        <span id="timerDisplay" class="text-sm font-bold text-slate-700 font-mono">00:00</span>
-      </div>
-      <button id="btnPause" class="text-slate-400 hover:text-slate-700 p-1 mt-1">
-        <svg id="pauseSvg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
-      </button>
-    </div>
-  </section>
-
-  <!-- Board Canvas with SVG Dashed Cages -->
-  <main class="w-full flex-1 flex flex-col justify-center items-center relative my-auto">
-    <div id="boardContainer" class="board-container">
-      <div id="sudokuGrid" class="sudoku-grid">
-        <!-- 81 dynamic interactive cells -->
-      </div>
-      <!-- SVG overlay for rendering inset dashed cage lines and sum tags -->
-      <svg id="cageSvg" class="cage-svg-layer" xmlns="http://www.w3.org/2000/svg"></svg>
-    </div>
-
-    <!-- AI Generation Loading Overlay -->
-    <div id="loaderModal" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-30 rounded-lg">
-      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-      <p class="text-sm font-bold text-slate-800">キラーナンプレ AI無限生成中...</p>
-      <span class="text-[11px] text-slate-500 mt-0.5">ケージの合計と唯一解を検証しています</span>
-    </div>
-
-    <!-- Pause Overlay -->
-    <div id="pauseModal" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center z-30 rounded-lg">
-      <h3 class="text-lg font-bold text-slate-800 mb-4">一時停止中</h3>
-      <button id="btnResume" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-7 py-2.5 rounded-full shadow-md btn-touch">
-        ゲーム再開
-      </button>
-    </div>
-  </main>
-
-  <!-- Action Tools Bar (元に戻す / 消す / メモ / ヒント) -->
-  <section class="w-full grid grid-cols-4 gap-2 my-2.5 px-2">
-    <!-- Undo -->
-    <button id="btnUndo" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 active:text-blue-600">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 0 1 5 5v2m0 0l-3-3m3 3l3-3M3 10l3-3m-3 3l3 3"/></svg>
-      </div>
-      <span class="text-xs font-semibold">元に戻す</span>
-    </button>
-
-    <!-- Erase -->
-    <button id="btnErase" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 active:text-blue-600">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-      </div>
-      <span class="text-xs font-semibold">消す</span>
-    </button>
-
-    <!-- Memo / Notes with Badge -->
-    <button id="btnMemo" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 relative">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5 relative">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-        <span id="memoBadge" class="absolute -top-0.5 -right-1 text-[9px] font-bold px-1 rounded-full bg-slate-400 text-white">OFF</span>
-      </div>
-      <span class="text-xs font-semibold">メモ</span>
-    </button>
-
-    <!-- Hint -->
-    <button id="btnHint" class="btn-touch flex flex-col items-center justify-center py-1.5 text-slate-500 active:text-blue-600">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center mb-0.5 relative">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-        <span class="absolute -top-0.5 -right-1 text-[9px] font-bold px-1.5 rounded-full bg-blue-600 text-white">1</span>
-      </div>
-      <span class="text-xs font-semibold">ヒント</span>
-    </button>
-  </section>
-
-  <!-- 1-9 Blue Number Pad matching reference screenshot -->
-  <section class="w-full grid grid-cols-9 gap-1 sm:gap-1.5 mb-2">
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="1">
-      1<span id="digit-count-1" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="2">
-      2<span id="digit-count-2" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="3">
-      3<span id="digit-count-3" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="4">
-      4<span id="digit-count-4" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="5">
-      5<span id="digit-count-5" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="6">
-      6<span id="digit-count-6" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="7">
-      7<span id="digit-count-7" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="8">
-      8<span id="digit-count-8" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-    <button class="btn-touch num-key flex flex-col items-center justify-center py-2 text-2xl sm:text-3xl font-bold text-blue-600 active:bg-blue-50 rounded-lg" data-digit="9">
-      9<span id="digit-count-9" class="text-[10px] text-slate-400 font-semibold mt-0.5">9</span>
-    </button>
-  </section>
-
-  <!-- Game Over Modal (3 Strikes) -->
-  <div id="gameOverModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border border-slate-100">
-      <div class="w-14 h-14 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl font-black">✕</div>
-      <h2 class="text-xl font-black text-slate-800 mb-1">ゲームオーバー</h2>
-      <p class="text-xs text-slate-500 mb-5">3回間違えました。再度挑戦してケージの合計関係を見極めましょう！</p>
-      
-      <div class="flex gap-2">
-        <button id="btnRetryCurrent" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl btn-touch text-xs">
-          再挑戦する
-        </button>
-        <button id="btnNewFromGameOver" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl btn-touch text-xs shadow-sm">
-          新しい問題
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Victory Modal -->
-  <div id="winModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center shadow-xl border border-slate-100">
-      <div class="w-14 h-14 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🏆</div>
-      <h2 class="text-xl font-black text-slate-800 mb-1">素晴らしい！クリア！</h2>
-      <p class="text-xs text-slate-500 mb-4">Killer Sudokuの推論を見事に完成させました。</p>
-      
-      <div class="bg-slate-50 rounded-xl p-3 mb-5 space-y-1.5 text-xs text-slate-600 border border-slate-100">
-        <div class="flex justify-between">
-          <span class="text-slate-400">難易度:</span>
-          <span id="winTierLabel" class="font-bold text-slate-800">エキスパート</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-400">タイム:</span>
-          <span id="winTimeLabel" class="font-bold font-mono text-blue-600 text-sm">--:--</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-slate-400">ベストタイム:</span>
-          <span id="winBestLabel" class="font-bold font-mono text-slate-700">--:--</span>
-        </div>
-      </div>
-
-      <button id="btnNextPuzzle" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md btn-touch text-sm">
-        次のパズルを生成
+      <button class="act-btn" onclick="startNewGame(true)" style="gap:0;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
       </button>
     </div>
   </div>
 
-  <canvas id="confettiCanvas" class="fixed inset-0 pointer-events-none z-40"></canvas>
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <div class="status-item">
+      <span>難易度</span>
+      <span class="val" id="dispDiff">エキスパート</span>
+    </div>
+    <div class="status-item mistakes">
+      <span>間違い</span>
+      <span class="val" id="dispMistakes">0/3</span>
+    </div>
+    <div class="status-item">
+      <span>ケージ合計</span>
+      <span class="val" id="dispCageSum">--</span>
+    </div>
+    <div class="status-item">
+      <span>タイム</span>
+      <span class="val" id="dispTimer">00:00</span>
+    </div>
+  </div>
 
-  <script>
-    const TIERS = {
-      hard: { name: '上級', clueCount: 4, minCage: 2, maxCage: 3 },
-      expert: { name: 'エキスパート', clueCount: 1, minCage: 2, maxCage: 4 },
-      master: { name: '極・マスター', clueCount: 0, minCage: 2, maxCage: 5 } // Zero given numbers
-    };
+  <!-- Board Wrapper -->
+  <div class="board-wrapper">
+    <div class="board-container" id="boardContainer">
+      <div class="grid-cells" id="gridCells"></div>
+      <svg class="cages-svg" id="cagesSvg" viewBox="0 0 900 900"></svg>
+    </div>
+  </div>
 
-    let currentTier = 'expert';
-    let solutionGrid = [];
-    let cages = [];              // Array of { id, sum, cells: [[r,c], ...], sumCell: [r,c] }
-    let cellCageMap = {};        // 'r,c' -> cage index
-    let userGrid = [];
-    let initialClues = [];
-    let pencilGrid = Array.from({ length: 81 }, () => new Set());
-    let selectedCellIndex = null;
-    let isMemoMode = false;
-    let mistakeCount = 0;
-    const MAX_MISTAKES = 3;
-    let timerInterval = null;
-    let elapsedSec = 0;
-    let isPaused = false;
-    let isGameOver = false;
-    let isGameWon = false;
-    let undoStack = [];
+  <!-- Action Controls -->
+  <div class="actions-bar">
+    <button class="act-btn" onclick="undoLastMove()">
+      <div class="act-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+      </div>
+      <span class="act-label">元に戻す</span>
+    </button>
 
-    // DOM Elements
-    const boardContainer = document.getElementById('boardContainer');
-    const sudokuGridEl = document.getElementById('sudokuGrid');
-    const cageSvg = document.getElementById('cageSvg');
-    const timerDisplay = document.getElementById('timerDisplay');
-    const mistakeBadge = document.getElementById('mistakeBadge');
-    const labelTier = document.getElementById('labelTier');
-    const diffSelect = document.getElementById('diffSelect');
-    const btnNewGameTop = document.getElementById('btnNewGameTop');
-    const genSpinIcon = document.getElementById('genSpinIcon');
-    const loaderModal = document.getElementById('loaderModal');
-    const btnPause = document.getElementById('btnPause');
-    const pauseModal = document.getElementById('pauseModal');
-    const btnResume = document.getElementById('btnResume');
-    const btnMemo = document.getElementById('btnMemo');
-    const memoBadge = document.getElementById('memoBadge');
-    const btnUndo = document.getElementById('btnUndo');
-    const btnErase = document.getElementById('btnErase');
-    const btnHint = document.getElementById('btnHint');
-    const gameOverModal = document.getElementById('gameOverModal');
-    const btnRetryCurrent = document.getElementById('btnRetryCurrent');
-    const btnNewFromGameOver = document.getElementById('btnNewFromGameOver');
-    const winModal = document.getElementById('winModal');
-    const btnNextPuzzle = document.getElementById('btnNextPuzzle');
+    <button class="act-btn" onclick="eraseSelected()">
+      <div class="act-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <span class="act-label">消す</span>
+    </button>
 
-    // Generator Engine
-    class KillerGenerator {
-      static createBlank() {
-        return Array.from({ length: 9 }, () => Array(9).fill(0));
+    <button class="act-btn" id="memoBtn" onclick="toggleNoteMode()">
+      <div class="act-icon">
+        <span class="badge" id="memoBadge">OFF</span>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </div>
+      <span class="act-label">メモ</span>
+    </button>
+
+    <button class="act-btn" onclick="provideHint()">
+      <div class="act-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z"/></svg>
+      </div>
+      <span class="act-label">ヒント</span>
+    </button>
+  </div>
+
+  <!-- Keypad (1 to 9) -->
+  <div class="keypad-container" id="keypad"></div>
+</div>
+
+<!-- Modal Overlays -->
+<div class="modal-overlay" id="loadingModal">
+  <div class="modal-card">
+    <h2>パズルを生成中...</h2>
+    <p>AIエンジンが唯一解のキラー数独を構築しています</p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="gameOverModal">
+  <div class="modal-card">
+    <h2 style="color:var(--text-error)">ゲームオーバー</h2>
+    <p>ミスが3回に達しました。<br>もう一度挑戦しますか？</p>
+    <button class="modal-btn" onclick="startNewGame(false)">リトライ</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="winModal">
+  <div class="modal-card">
+    <h2 style="color:var(--primary)">クリアおめでとうございます！</h2>
+    <p id="winMessage">見事にパズルを完成させました！</p>
+    <button class="modal-btn" onclick="startNewGame(true)">次のパズルへ</button>
+  </div>
+</div>
+
+<script>
+  /* --- Game State Variables --- */
+  let currentDifficulty = 'expert';
+  let solution = [];
+  let userGrid = [];
+  let initialGrid = [];
+  let notes = {};
+  let cages = []; // Array of { id, sum, cells: [idx, ...] }
+  let cellCageMap = {}; // idx -> cage
+  let selectedCell = null;
+  let isNoteMode = false;
+  let mistakes = 0;
+  let timerInterval = null;
+  let elapsedSeconds = 0;
+  let undoStack = [];
+
+  const STORAGE_KEY = 'killer_sudoku_active_game_v2';
+
+  /* --- Initialization --- */
+  window.addEventListener('DOMContentLoaded', () => {
+    buildKeypad();
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        loadSavedGame(JSON.parse(saved));
+      } catch(e) {
+        startNewGame(true);
       }
-
-      static getValidValues(grid, r, c) {
-        if (grid[r][c] !== 0) return [];
-        const used = new Set();
-        for (let i = 0; i < 9; i++) {
-          if (grid[r][i] !== 0) used.add(grid[r][i]);
-          if (grid[i][c] !== 0) used.add(grid[i][c]);
-        }
-        const br = Math.floor(r / 3) * 3;
-        const bc = Math.floor(c / 3) * 3;
-        for (let ro = 0; ro < 3; ro++) {
-          for (let co = 0; co < 3; co++) {
-            const v = grid[br + ro][bc + co];
-            if (v !== 0) used.add(v);
-          }
-        }
-        const valid = [];
-        for (let n = 1; n <= 9; n++) {
-          if (!used.has(n)) valid.push(n);
-        }
-        return valid;
-      }
-
-      static solveRandomSudoku(grid) {
-        let bestR = -1, bestC = -1, minOpts = 10, bestOpts = null;
-        for (let r = 0; r < 9; r++) {
-          for (let c = 0; c < 9; c++) {
-            if (grid[r][c] === 0) {
-              const opts = this.getValidValues(grid, r, c);
-              if (opts.length < minOpts) {
-                minOpts = opts.length;
-                bestR = r;
-                bestC = c;
-                bestOpts = opts;
-                if (minOpts === 0) return false;
-              }
-            }
-          }
-        }
-        if (bestR === -1) return true;
-
-        bestOpts.sort(() => Math.random() - 0.5);
-        for (const num of bestOpts) {
-          grid[bestR][bestC] = num;
-          if (this.solveRandomSudoku(grid)) return true;
-          grid[bestR][bestC] = 0;
-        }
-        return false;
-      }
-
-      static buildCages(solution, minC, maxC) {
-        const assigned = Array.from({ length: 9 }, () => Array(9).fill(false));
-        const cages = [];
-        let cageId = 0;
-
-        const getUnassignedNeighbors = (r, c) => {
-          const res = [];
-          if (r > 0 && !assigned[r - 1][c]) res.push([r - 1, c]);
-          if (r < 8 && !assigned[r + 1][c]) res.push([r + 1, c]);
-          if (c > 0 && !assigned[r][c - 1]) res.push([r, c - 1]);
-          if (c < 8 && !assigned[r][c + 1]) res.push([r, c + 1]);
-          return res;
-        };
-
-        for (let r = 0; r < 9; r++) {
-          for (let c = 0; c < 9; c++) {
-            if (assigned[r][c]) continue;
-
-            const targetSize = Math.floor(Math.random() * (maxC - minC + 1)) + minC;
-            const cageCells = [[r, c]];
-            const seen = new Set([solution[r][c]]);
-            assigned[r][c] = true;
-
-            while (cageCells.length < targetSize) {
-              const candidateNeighbors = [];
-              for (const [cr, cc] of cageCells) {
-                for (const item of getUnassignedNeighbors(cr, cc)) {
-                  const val = solution[item[0]][item[1]];
-                  if (!seen.has(val)) candidateNeighbors.push(item);
-                }
-              }
-              if (candidateNeighbors.length === 0) break;
-              const pick = candidateNeighbors[Math.floor(Math.random() * candidateNeighbors.length)];
-              if (!assigned[pick[0]][pick[1]]) {
-                assigned[pick[0]][pick[1]] = true;
-                seen.add(solution[pick[0]][pick[1]]);
-                cageCells.push(pick);
-              }
-            }
-
-            cageCells.sort((a, b) => (a[0] * 9 + a[1]) - (b[0] * 9 + b[1]));
-            const sumVal = cageCells.reduce((acc, curr) => acc + solution[curr[0]][curr[1]], 0);
-
-            cages.push({
-              id: cageId++,
-              sum: sumVal,
-              cells: cageCells,
-              sumCell: cageCells[0]
-            });
-          }
-        }
-        return cages;
-      }
-
-      static async generateAsync(tierKey) {
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            const fullGrid = this.createBlank();
-            this.solveRandomSudoku(fullGrid);
-
-            const tier = TIERS[tierKey];
-            const cages = this.buildCages(fullGrid, tier.minCage, tier.maxCage);
-
-            const clues = this.createBlank();
-            if (tier.clueCount > 0) {
-              const allPos = [];
-              for (let r = 0; r < 9; r++) {
-                for (let c = 0; c < 9; c++) allPos.push([r, c]);
-              }
-              allPos.sort(() => Math.random() - 0.5);
-              for (let i = 0; i < tier.clueCount; i++) {
-                const [cr, cc] = allPos[i];
-                clues[cr][cc] = fullGrid[cr][cc];
-              }
-            }
-
-            resolve({ solution: fullGrid, cages, clues });
-          }, 40);
-        });
-      }
+    } else {
+      startNewGame(true);
     }
+  });
 
-    function buildBoardDOM() {
-      sudokuGridEl.innerHTML = '';
-      for (let i = 0; i < 81; i++) {
-        const r = Math.floor(i / 9);
-        const c = i % 9;
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        if (r === 2 || r === 5) cell.classList.add('block-bottom');
-        if (r === 8) cell.classList.add('grid-bottom');
-        cell.dataset.index = i;
-        cell.dataset.row = r;
-        cell.dataset.col = c;
-        cell.addEventListener('click', () => handleCellClick(i));
-        sudokuGridEl.appendChild(cell);
-      }
+  function buildKeypad() {
+    const pad = document.getElementById('keypad');
+    pad.innerHTML = '';
+    for (let i = 1; i <= 9; i++) {
+      const btn = document.createElement('div');
+      btn.className = 'key-btn';
+      btn.innerText = i;
+      btn.onpointerdown = (e) => {
+        e.preventDefault();
+        onNumberInput(i);
+      };
+      pad.appendChild(btn);
     }
+  }
 
-    /**
-     * Renders inset dashed lines in SVG.
-     * Crucial for clarity: Insetting the dashed lines by ~3px creates the exact
-     * crisp, distinguishable look seen in Sudoku.com.
-     */
-    function renderSvgCages() {
-      cageSvg.innerHTML = '';
-      const w = boardContainer.clientWidth;
-      const h = boardContainer.clientHeight;
-      if (!w || !h) return;
+  function changeDifficulty(val) {
+    currentDifficulty = val;
+    startNewGame(true);
+  }
 
-      cageSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-      const cellW = w / 9;
-      const cellH = h / 9;
-      const inset = Math.max(2.5, Math.min(4, cellW * 0.075)); // Inset distance from cell border
-
-      cages.forEach(cage => {
-        const cellSet = new Set(cage.cells.map(([r, c]) => `${r},${c}`));
-
-        // 1. Draw Inset Dashed Segments for each cell border not shared with same cage
-        cage.cells.forEach(([r, c]) => {
-          const x0 = c * cellW;
-          const y0 = r * cellH;
-          const x1 = (c + 1) * cellW;
-          const y1 = (r + 1) * cellH;
-
-          const hasTop = cellSet.has(`${r - 1},${c}`);
-          const hasBottom = cellSet.has(`${r + 1},${c}`);
-          const hasLeft = cellSet.has(`${r},${c - 1}`);
-          const hasRight = cellSet.has(`${r},${c + 1}`);
-
-          // Top edge
-          if (!hasTop) {
-            const lx0 = hasLeft ? x0 : x0 + inset;
-            const lx1 = hasRight ? x1 : x1 - inset;
-            drawLine(lx0, y0 + inset, lx1, y0 + inset);
-          }
-          // Bottom edge
-          if (!hasBottom) {
-            const lx0 = hasLeft ? x0 : x0 + inset;
-            const lx1 = hasRight ? x1 : x1 - inset;
-            drawLine(lx0, y1 - inset, lx1, y1 - inset);
-          }
-          // Left edge
-          if (!hasLeft) {
-            const ly0 = hasTop ? y0 : y0 + inset;
-            const ly1 = hasBottom ? y1 : y1 - inset;
-            drawLine(x0 + inset, ly0, x0 + inset, ly1);
-          }
-          // Right edge
-          if (!hasRight) {
-            const ly0 = hasTop ? y0 : y0 + inset;
-            const ly1 = hasBottom ? y1 : y1 - inset;
-            drawLine(x1 - inset, ly0, x1 - inset, ly1);
-          }
-
-          // Inner corners when diagonally adjacent but not orthogonally
-          if (hasTop && hasLeft && !cellSet.has(`${r - 1},${c - 1}`)) {
-            drawLine(x0, y0 + inset, x0 + inset, y0 + inset);
-            drawLine(x0 + inset, y0, x0 + inset, y0 + inset);
-          }
-          if (hasTop && hasRight && !cellSet.has(`${r - 1},${c + 1}`)) {
-            drawLine(x1 - inset, y0 + inset, x1, y0 + inset);
-            drawLine(x1 - inset, y0, x1 - inset, y0 + inset);
-          }
-          if (hasBottom && hasLeft && !cellSet.has(`${r + 1},${c - 1}`)) {
-            drawLine(x0, y1 - inset, x0 + inset, y1 - inset);
-            drawLine(x0 + inset, y1 - inset, x0 + inset, y1);
-          }
-          if (hasBottom && hasRight && !cellSet.has(`${r + 1},${c + 1}`)) {
-            drawLine(x1 - inset, y1 - inset, x1, y1 - inset);
-            drawLine(x1 - inset, y1 - inset, x1 - inset, y1);
-          }
-        });
-
-        // 2. Render Sum Number Label on top-left of the first cell of the cage
-        const [sr, sc] = cage.sumCell;
-        const textX = sc * cellW + inset + 2.5;
-        const textY = sr * cellH + inset + (cellH * 0.24);
-
-        const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        textEl.setAttribute('x', textX);
-        textEl.setAttribute('y', textY);
-        textEl.setAttribute('class', 'cage-sum-text');
-        textEl.textContent = cage.sum;
-        cageSvg.appendChild(textEl);
-      });
+  function toggleNoteMode() {
+    isNoteMode = !isNoteMode;
+    const btn = document.getElementById('memoBtn');
+    const badge = document.getElementById('memoBadge');
+    if (isNoteMode) {
+      btn.classList.add('active');
+      badge.innerText = 'ON';
+    } else {
+      btn.classList.remove('active');
+      badge.innerText = 'OFF';
     }
+  }
 
-    function drawLine(x1, y1, x2, y2) {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', x1);
-      line.setAttribute('y1', y1);
-      line.setAttribute('x2', x2);
-      line.setAttribute('y2', y2);
-      line.setAttribute('class', 'cage-stroke');
-      cageSvg.appendChild(line);
-    }
-
-    function refreshBoard() {
-      const cells = sudokuGridEl.querySelectorAll('.cell');
-      const selR = selectedCellIndex !== null ? Math.floor(selectedCellIndex / 9) : null;
-      const selC = selectedCellIndex !== null ? selectedCellIndex % 9 : null;
-      const selVal = (selectedCellIndex !== null && userGrid.length) ? userGrid[selR][selC] : 0;
-      const selCageId = selectedCellIndex !== null ? cellCageMap[`${selR},${selC}`] : null;
-
-      const digitTally = { 1:0, 2:0, 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0 };
-
-      for (let i = 0; i < 81; i++) {
-        const r = Math.floor(i / 9);
-        const c = i % 9;
-        const val = userGrid[r][c];
-        const isClue = initialClues[r][c] !== 0;
-        const cellEl = cells[i];
-
-        if (val !== 0) digitTally[val]++;
-
-        // Highlights
-        cellEl.classList.remove('cell-selected', 'cell-related', 'cell-same-number');
-
-        if (selectedCellIndex !== null) {
-          if (i === selectedCellIndex) {
-            cellEl.classList.add('cell-selected');
-          } else if (
-            (selCageId !== null && cellCageMap[`${r},${c}`] === selCageId) || // Same cage highlight
-            r === selR || c === selC || 
-            (Math.floor(r / 3) === Math.floor(selR / 3) && Math.floor(c / 3) === Math.floor(selC / 3))
-          ) {
-            cellEl.classList.add('cell-related');
-          }
-          if (selVal !== 0 && val === selVal && i !== selectedCellIndex) {
-            cellEl.classList.add('cell-same-number');
-          }
-        }
-
-        // Digits & Notes
-        let numEl = cellEl.querySelector('.cell-number');
-        let noteEl = cellEl.querySelector('.note-grid');
-
-        if (val !== 0) {
-          if (noteEl) noteEl.remove();
-          if (!numEl) {
-            numEl = document.createElement('span');
-            numEl.className = 'cell-number';
-            cellEl.appendChild(numEl);
-          }
-          numEl.textContent = val;
-          numEl.className = `cell-number ${isClue ? 'clue-val' : 'user-val'}`;
-          if (!isClue && val !== solutionGrid[r][c]) {
-            numEl.classList.add('wrong-val');
-          }
-        } else {
-          if (numEl) numEl.remove();
-          const notes = pencilGrid[i];
-          if (notes && notes.size > 0) {
-            if (!noteEl) {
-              noteEl = document.createElement('div');
-              noteEl.className = 'note-grid';
-              cellEl.appendChild(noteEl);
-            }
-            noteEl.innerHTML = '';
-            for (let d = 1; d <= 9; d++) {
-              const dEl = document.createElement('div');
-              dEl.className = 'note-digit';
-              dEl.textContent = notes.has(d) ? d : '';
-              noteEl.appendChild(dEl);
-            }
-          } else if (noteEl) {
-            noteEl.remove();
-          }
-        }
-      }
-
-      // Tally on keypad
-      for (let d = 1; d <= 9; d++) {
-        const span = document.getElementById(`digit-count-${d}`);
-        const left = 9 - digitTally[d];
-        if (span) {
-          span.textContent = left <= 0 ? '✓' : left;
-          span.className = `text-[10px] ${left <= 0 ? 'text-teal-600 font-bold' : 'text-slate-400 font-semibold'} mt-0.5`;
-        }
-      }
-    }
-
-    function handleCellClick(idx) {
-      if (isPaused || isGameOver || isGameWon) return;
-      selectedCellIndex = idx;
-      refreshBoard();
-    }
-
-    function pushHistory() {
-      undoStack.push({
-        grid: userGrid.map(row => [...row]),
-        notes: pencilGrid.map(s => new Set(s)),
-        mistakes: mistakeCount
-      });
-      if (undoStack.length > 30) undoStack.shift();
-    }
-
-    function triggerHaptic() {
-      if ('vibrate' in navigator) navigator.vibrate(50);
-    }
-
-    function inputDigit(digit) {
-      if (selectedCellIndex === null || isPaused || isGameOver || isGameWon) return;
-      const r = Math.floor(selectedCellIndex / 9);
-      const c = selectedCellIndex % 9;
-
-      if (initialClues[r][c] !== 0) return; // Clues locked
-
-      pushHistory();
-
-      if (isMemoMode) {
-        if (pencilGrid[selectedCellIndex].has(digit)) {
-          pencilGrid[selectedCellIndex].delete(digit);
-        } else {
-          pencilGrid[selectedCellIndex].add(digit);
-        }
-        userGrid[r][c] = 0;
-      } else {
-        if (userGrid[r][c] === digit) {
-          userGrid[r][c] = 0;
-        } else {
-          userGrid[r][c] = digit;
-          pencilGrid[selectedCellIndex].clear();
-
-          // Mistake Check
-          if (digit !== solutionGrid[r][c]) {
-            mistakeCount++;
-            triggerHaptic();
-            updateMistakeBadge();
-
-            if (mistakeCount >= MAX_MISTAKES) {
-              handleGameOver();
-              refreshBoard();
-              return;
-            }
-          } else {
-            prunePencilNotes(r, c, digit);
-          }
-        }
-      }
-
-      refreshBoard();
-      saveActiveGame();
-      checkVictory();
-    }
-
-    function prunePencilNotes(row, col, num) {
+  /* --- Killer Sudoku Puzzle Generator Engine --- */
+  function generateFullSudoku() {
+    const board = Array(81).fill(0);
+    const nums = [1,2,3,4,5,6,7,8,9];
+    
+    function isValid(b, idx, n) {
+      const r = Math.floor(idx / 9);
+      const c = idx % 9;
       for (let i = 0; i < 9; i++) {
-        pencilGrid[row * 9 + i].delete(num);
-        pencilGrid[i * 9 + col].delete(num);
+        if (b[r * 9 + i] === n || b[i * 9 + c] === n) return false;
       }
-      const br = Math.floor(row / 3) * 3;
-      const bc = Math.floor(col / 3) * 3;
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) {
-          pencilGrid[(br + r) * 9 + (bc + c)].delete(num);
+      const br = Math.floor(r / 3) * 3;
+      const bc = Math.floor(c / 3) * 3;
+      for (let dr = 0; dr < 3; dr++) {
+        for (let dc = 0; dc < 3; dc++) {
+          if (b[(br + dr) * 9 + (bc + dc)] === n) return false;
         }
       }
-      const cageId = cellCageMap[`${row},${col}`];
-      if (cageId !== undefined && cages[cageId]) {
-        cages[cageId].cells.forEach(([cr, cc]) => {
-          pencilGrid[cr * 9 + cc].delete(num);
-        });
-      }
-    }
-
-    function updateMistakeBadge() {
-      mistakeBadge.textContent = `${mistakeCount}/${MAX_MISTAKES}`;
-      mistakeBadge.className = `text-sm font-bold tracking-wide ${mistakeCount > 0 ? 'text-rose-500' : 'text-slate-700'}`;
-    }
-
-    function handleGameOver() {
-      isGameOver = true;
-      stopTimer();
-      gameOverModal.classList.remove('hidden');
-    }
-
-    function executeErase() {
-      if (selectedCellIndex === null || isPaused || isGameOver || isGameWon) return;
-      const r = Math.floor(selectedCellIndex / 9);
-      const c = selectedCellIndex % 9;
-      if (initialClues[r][c] !== 0) return;
-
-      pushHistory();
-      userGrid[r][c] = 0;
-      pencilGrid[selectedCellIndex].clear();
-      refreshBoard();
-      saveActiveGame();
-    }
-
-    function executeUndo() {
-      if (undoStack.length === 0 || isPaused || isGameOver || isGameWon) return;
-      const state = undoStack.pop();
-      userGrid = state.grid;
-      pencilGrid = state.notes;
-      mistakeCount = state.mistakes;
-      updateMistakeBadge();
-      refreshBoard();
-      saveActiveGame();
-    }
-
-    function executeHint() {
-      if (selectedCellIndex === null || isPaused || isGameOver || isGameWon) return;
-      const r = Math.floor(selectedCellIndex / 9);
-      const c = selectedCellIndex % 9;
-      if (initialClues[r][c] !== 0 || userGrid[r][c] === solutionGrid[r][c]) return;
-
-      pushHistory();
-      userGrid[r][c] = solutionGrid[r][c];
-      pencilGrid[selectedCellIndex].clear();
-      prunePencilNotes(r, c, solutionGrid[r][c]);
-      refreshBoard();
-      saveActiveGame();
-      checkVictory();
-    }
-
-    function formatTime(s) {
-      const m = Math.floor(s / 60);
-      const sec = s % 60;
-      return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-    }
-
-    function startTimer() {
-      stopTimer();
-      timerInterval = setInterval(() => {
-        if (!isPaused && !isGameOver && !isGameWon) {
-          elapsedSec++;
-          timerDisplay.textContent = formatTime(elapsedSec);
-        }
-      }, 1000);
-    }
-
-    function stopTimer() {
-      if (timerInterval) clearInterval(timerInterval);
-    }
-
-    function checkVictory() {
-      for (let r = 0; r < 9; r++) {
-        for (let c = 0; c < 9; c++) {
-          if (userGrid[r][c] !== solutionGrid[r][c]) return false;
-        }
-      }
-
-      isGameWon = true;
-      stopTimer();
-      saveBestTime(currentTier, elapsedSec);
-
-      document.getElementById('winTierLabel').textContent = TIERS[currentTier].name;
-      document.getElementById('winTimeLabel').textContent = formatTime(elapsedSec);
-      const best = getBestTime(currentTier);
-      document.getElementById('winBestLabel').textContent = best ? formatTime(best) : formatTime(elapsedSec);
-
-      winModal.classList.remove('hidden');
-      triggerConfetti();
-      localStorage.removeItem('killer_sudoku_active');
       return true;
     }
 
-    function getBestTime(tier) {
-      const val = localStorage.getItem(`killer_best_${tier}`);
-      return val ? parseInt(val, 10) : null;
+    function solve(idx) {
+      if (idx === 81) return true;
+      const shuffled = [...nums].sort(() => Math.random() - 0.5);
+      for (let n of shuffled) {
+        if (isValid(board, idx, n)) {
+          board[idx] = n;
+          if (solve(idx + 1)) return true;
+          board[idx] = 0;
+        }
+      }
+      return false;
     }
 
-    function saveBestTime(tier, time) {
-      const prev = getBestTime(tier);
-      if (!prev || time < prev) localStorage.setItem(`killer_best_${tier}`, time);
+    solve(0);
+    return board;
+  }
+
+  function buildKillerCages(fullBoard, difficulty) {
+    const assigned = Array(81).fill(false);
+    const cageList = [];
+    let cageId = 0;
+
+    // 難易度に応じたケージサイズ制限
+    let maxCageSize = 4;
+    if (difficulty === 'hard') maxCageSize = 3;
+    if (difficulty === 'master') maxCageSize = 5;
+
+    for (let i = 0; i < 81; i++) {
+      if (assigned[i]) continue;
+      const cageCells = [i];
+      assigned[i] = true;
+
+      const targetSize = Math.floor(Math.random() * (maxCageSize - 1)) + 2; // 2〜maxCageSize
+      let currentIdx = i;
+
+      for (let step = 1; step < targetSize; step++) {
+        const r = Math.floor(currentIdx / 9);
+        const c = currentIdx % 9;
+        const neighbors = [];
+        if (r > 0) neighbors.push((r - 1) * 9 + c);
+        if (r < 8) neighbors.push((r + 1) * 9 + c);
+        if (c > 0) neighbors.push(r * 9 + (c - 1));
+        if (c < 8) neighbors.push(r * 9 + (c + 1));
+
+        // 同じ数字が入らない隣接セルを探索
+        const existingNums = new Set(cageCells.map(ci => fullBoard[ci]));
+        const validN = neighbors.filter(nIdx => !assigned[nIdx] && !existingNums.has(fullBoard[nIdx]));
+
+        if (validN.length === 0) break;
+        const nextIdx = validN[Math.floor(Math.random() * validN.length)];
+        cageCells.push(nextIdx);
+        assigned[nextIdx] = true;
+        currentIdx = nextIdx;
+      }
+
+      // ケージの合計値を算出
+      const sum = cageCells.reduce((acc, ci) => acc + fullBoard[ci], 0);
+      cageList.push({ id: cageId++, sum, cells: cageCells });
     }
 
-    function saveActiveGame() {
-      if (isGameWon || isGameOver) return;
-      const payload = {
-        tier: currentTier,
-        solution: solutionGrid,
-        cages: cages,
-        clues: initialClues,
-        user: userGrid,
-        pencils: pencilGrid.map(s => Array.from(s)),
-        mistakes: mistakeCount,
-        time: elapsedSec
-      };
-      localStorage.setItem('killer_sudoku_active', JSON.stringify(payload));
-    }
+    return cageList;
+  }
 
-    function loadActiveGame() {
-      const raw = localStorage.getItem('killer_sudoku_active');
-      if (!raw) return false;
-      try {
-        const data = JSON.parse(raw);
-        if (!TIERS[data.tier]) return false;
+  /* --- Game Initialization & Render --- */
+  function startNewGame(isNewPuzzle = true) {
+    clearInterval(timerInterval);
+    document.getElementById('loadingModal').classList.add('show');
+    document.getElementById('gameOverModal').classList.remove('show');
+    document.getElementById('winModal').classList.remove('show');
 
-        currentTier = data.tier;
-        diffSelect.value = currentTier;
-        labelTier.textContent = TIERS[currentTier].name;
-        solutionGrid = data.solution;
-        cages = data.cages;
-        initialClues = data.clues;
-        userGrid = data.user;
-        pencilGrid = data.pencils.map(arr => new Set(arr));
-        mistakeCount = data.mistakes || 0;
-        elapsedSec = data.time || 0;
-
+    setTimeout(() => {
+      if (isNewPuzzle || solution.length === 0) {
+        solution = generateFullSudoku();
+        cages = buildKillerCages(solution, currentDifficulty);
         cellCageMap = {};
-        cages.forEach((cage, idx) => {
-          cage.cells.forEach(([r, c]) => {
-            cellCageMap[`${r},${c}`] = idx;
-          });
-        });
+        cages.forEach(cg => cg.cells.forEach(idx => cellCageMap[idx] = cg));
 
-        timerDisplay.textContent = formatTime(elapsedSec);
-        updateMistakeBadge();
-        requestAnimationFrame(() => renderSvgCages());
-        refreshBoard();
-        startTimer();
-        return true;
-      } catch (e) {
-        return false;
+        // ヒント初期数字（上級は2マス、エキスパートは1マス、マスターは完全0マス）
+        initialGrid = Array(81).fill(0);
+        let prefilled = 0;
+        if (currentDifficulty === 'hard') prefilled = 2;
+        if (currentDifficulty === 'expert') prefilled = 1;
+        if (currentDifficulty === 'master') prefilled = 0;
+
+        const indices = [...Array(81).keys()].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < prefilled; i++) {
+          initialGrid[indices[i]] = solution[indices[i]];
+        }
       }
-    }
 
-    async function startNewGame(tierKey = currentTier) {
-      currentTier = tierKey;
-      labelTier.textContent = TIERS[tierKey].name;
-      winModal.classList.add('hidden');
-      gameOverModal.classList.add('hidden');
-      pauseModal.classList.add('hidden');
-
-      isGameOver = false;
-      isGameWon = false;
-      isPaused = false;
-      mistakeCount = 0;
-      elapsedSec = 0;
-      selectedCellIndex = null;
+      userGrid = [...initialGrid];
+      notes = {};
+      mistakes = 0;
+      elapsedSeconds = 0;
       undoStack = [];
-      timerDisplay.textContent = '00:00';
-      updateMistakeBadge();
+      selectedCell = null;
 
-      loaderModal.classList.remove('hidden');
-      genSpinIcon.classList.add('animate-spin');
-
-      const data = await KillerGenerator.generateAsync(tierKey);
-
-      solutionGrid = data.solution;
-      cages = data.cages;
-      initialClues = data.clues;
-      userGrid = data.clues.map(row => [...row]);
-      pencilGrid = Array.from({ length: 81 }, () => new Set());
-
-      cellCageMap = {};
-      cages.forEach((cage, idx) => {
-        cage.cells.forEach(([r, c]) => {
-          cellCageMap[`${r},${c}`] = idx;
-        });
-      });
-
-      renderSvgCages();
-      loaderModal.classList.add('hidden');
-      genSpinIcon.classList.remove('animate-spin');
-
-      refreshBoard();
+      updateStatusHeader();
+      renderBoard();
+      drawCagesSVG();
       startTimer();
-      saveActiveGame();
-    }
+      saveGame();
 
-    function triggerConfetti() {
-      const canvas = document.getElementById('confettiCanvas');
-      const ctx = canvas.getContext('2d');
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      document.getElementById('loadingModal').classList.remove('show');
+    }, 60);
+  }
 
-      const particles = [];
-      const colors = ['#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ec4899'];
-      for (let i = 0; i < 80; i++) {
-        particles.push({
-          x: canvas.width / 2,
-          y: canvas.height / 2,
-          vx: (Math.random() - 0.5) * 16,
-          vy: (Math.random() - 0.7) * 18,
-          size: Math.random() * 7 + 4,
-          color: colors[Math.floor(Math.random() * colors.length)],
-          angle: Math.random() * 360,
-          spin: (Math.random() - 0.5) * 10
-        });
+  function renderBoard() {
+    const grid = document.getElementById('gridCells');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < 81; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.idx = i;
+
+      const cg = cellCageMap[i];
+      // ケージの左上セル（最小インデックス）に合計値を描画
+      if (cg && Math.min(...cg.cells) === i) {
+        cell.classList.add('has-sum');
+        const sumLabel = document.createElement('span');
+        sumLabel.className = 'cage-sum';
+        sumLabel.innerText = cg.sum;
+        cell.appendChild(sumLabel);
       }
 
-      let frames = 0;
-      function loop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => {
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.28;
-          p.angle += p.spin;
-          ctx.save();
-          ctx.translate(p.x, p.y);
-          ctx.rotate((p.angle * Math.PI) / 180);
-          ctx.fillStyle = p.color;
-          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-          ctx.restore();
-        });
-        frames++;
-        if (frames < 140) requestAnimationFrame(loop);
-        else ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // ユーザー入力・初期数字・メモ
+      if (userGrid[i] !== 0) {
+        const numSpan = document.createElement('span');
+        numSpan.innerText = userGrid[i];
+        if (initialGrid[i] !== 0) cell.classList.add('fixed');
+        cell.appendChild(numSpan);
+      } else if (notes[i] && notes[i].length > 0) {
+        const noteContainer = document.createElement('div');
+        noteContainer.className = 'notes-grid';
+        for (let n = 1; n <= 9; n++) {
+          const nItem = document.createElement('div');
+          nItem.className = 'note-item';
+          nItem.innerText = notes[i].includes(n) ? n : '';
+          noteContainer.appendChild(nItem);
+        }
+        cell.appendChild(noteContainer);
       }
-      loop();
-    }
 
-    // Keypad binding
-    document.querySelectorAll('.num-key').forEach(btn => {
-      btn.addEventListener('click', () => {
-        inputDigit(parseInt(btn.dataset.digit, 10));
+      cell.onpointerdown = (e) => {
+        e.preventDefault();
+        selectCell(i);
+      };
+
+      grid.appendChild(cell);
+    }
+  }
+
+  /* --- Inset Dashed SVG Overlay Rendering --- */
+  function drawCagesSVG() {
+    const svg = document.getElementById('cagesSvg');
+    svg.innerHTML = '';
+    const S = 100; // 各セル 100x100 (計900x900)
+    const INSET = 4; // グリッド線との被りを完全に防ぐ4pxインセット
+
+    cages.forEach(cg => {
+      const cellSet = new Set(cg.cells);
+      cg.cells.forEach(idx => {
+        const r = Math.floor(idx / 9);
+        const c = idx % 9;
+        const x = c * S;
+        const y = r * S;
+
+        const hasTop = cellSet.has((r - 1) * 9 + c);
+        const hasBottom = cellSet.has((r + 1) * 9 + c);
+        const hasLeft = cellSet.has(r * 9 + (c - 1));
+        const hasRight = cellSet.has(r * 9 + (c + 1));
+
+        const x1 = x + INSET;
+        const x2 = x + S - INSET;
+        const y1 = y + INSET;
+        const y2 = y + S - INSET;
+
+        // ケージ境界となる辺に破線を描画
+        if (!hasTop) drawDashedLine(svg, x1, y1, x2, y1);
+        if (!hasBottom) drawDashedLine(svg, x1, y2, x2, y2);
+        if (!hasLeft) drawDashedLine(svg, x1, y1, x1, y2);
+        if (!hasRight) drawDashedLine(svg, x2, y1, x2, y2);
+
+        // コーナーの破線結合補助
+        if (hasTop && hasLeft && !cellSet.has((r - 1) * 9 + (c - 1))) {
+          drawDashedLine(svg, x + INSET, y, x + INSET, y + INSET);
+          drawDashedLine(svg, x, y + INSET, x + INSET, y + INSET);
+        }
+        if (hasTop && hasRight && !cellSet.has((r - 1) * 9 + (c + 1))) {
+          drawDashedLine(svg, x + S - INSET, y, x + S - INSET, y + INSET);
+          drawDashedLine(svg, x + S - INSET, y + INSET, x + S, y + INSET);
+        }
+        if (hasBottom && hasLeft && !cellSet.has((r + 1) * 9 + (c - 1))) {
+          drawDashedLine(svg, x + INSET, y + S - INSET, x + INSET, y + S);
+          drawDashedLine(svg, x, y + S - INSET, x + INSET, y + S - INSET);
+        }
+        if (hasBottom && hasRight && !cellSet.has((r + 1) * 9 + (c + 1))) {
+          drawDashedLine(svg, x + S - INSET, y + S - INSET, x + S - INSET, y + S);
+          drawDashedLine(svg, x + S - INSET, y + S - INSET, x + S, y + S - INSET);
+        }
       });
     });
+  }
 
-    // Memo toggle
-    btnMemo.addEventListener('click', () => {
-      isMemoMode = !isMemoMode;
-      if (isMemoMode) {
-        memoBadge.textContent = 'ON';
-        memoBadge.classList.replace('bg-slate-400', 'bg-blue-600');
-        btnMemo.classList.add('text-blue-600');
+  function drawDashedLine(svg, x1, y1, x2, y2) {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    line.setAttribute('stroke', '#52667d');
+    line.setAttribute('stroke-width', '1.6');
+    line.setAttribute('stroke-dasharray', '4,3');
+    line.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(line);
+  }
+
+  /* --- Cell Selection & Visual Highlighting --- */
+  function selectCell(idx) {
+    selectedCell = idx;
+    updateHighlights();
+  }
+
+  function updateHighlights() {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(c => {
+      c.classList.remove('selected', 'highlight-peer', 'highlight-same-num');
+    });
+
+    if (selectedCell === null) {
+      document.getElementById('dispCageSum').innerText = '--';
+      return;
+    }
+
+    const selR = Math.floor(selectedCell / 9);
+    const selC = selectedCell % 9;
+    const selVal = userGrid[selectedCell];
+    const cg = cellCageMap[selectedCell];
+
+    if (cg) {
+      const curSum = cg.cells.reduce((a, ci) => a + (userGrid[ci] || 0), 0);
+      document.getElementById('dispCageSum').innerText = `${curSum} / ${cg.sum}`;
+    }
+
+    cells.forEach((c, idx) => {
+      const r = Math.floor(idx / 9);
+      const col = idx % 9;
+      const isPeer = (r === selR || col === selC || (cg && cg.cells.includes(idx)));
+
+      if (idx === selectedCell) {
+        c.classList.add('selected');
+      } else if (isPeer) {
+        c.classList.add('highlight-peer');
+      }
+
+      if (selVal !== 0 && userGrid[idx] === selVal) {
+        c.classList.add('highlight-same-num');
+      }
+    });
+  }
+
+  /* --- Gameplay Actions & Validation --- */
+  function onNumberInput(num) {
+    if (selectedCell === null || initialGrid[selectedCell] !== 0) return;
+
+    if (isNoteMode) {
+      // メモモード
+      if (!notes[selectedCell]) notes[selectedCell] = [];
+      const noteIdx = notes[selectedCell].indexOf(num);
+      if (noteIdx > -1) {
+        notes[selectedCell].splice(noteIdx, 1);
       } else {
-        memoBadge.textContent = 'OFF';
-        memoBadge.classList.replace('bg-blue-600', 'bg-slate-400');
-        btnMemo.classList.remove('text-blue-600');
+        notes[selectedCell].push(num);
       }
-    });
+      renderBoard();
+      updateHighlights();
+      saveGame();
+      return;
+    }
 
-    btnUndo.addEventListener('click', executeUndo);
-    btnErase.addEventListener('click', executeErase);
-    btnHint.addEventListener('click', executeHint);
-
-    btnPause.addEventListener('click', () => {
-      if (isGameWon || isGameOver) return;
-      isPaused = true;
-      pauseModal.classList.remove('hidden');
-    });
-
-    btnResume.addEventListener('click', () => {
-      isPaused = false;
-      pauseModal.classList.add('hidden');
-    });
-
-    diffSelect.addEventListener('change', (e) => startNewGame(e.target.value));
-    btnNewGameTop.addEventListener('click', () => startNewGame(diffSelect.value));
-    btnNextPuzzle.addEventListener('click', () => startNewGame(diffSelect.value));
-
-    btnRetryCurrent.addEventListener('click', () => {
-      gameOverModal.classList.add('hidden');
-      isGameOver = false;
-      mistakeCount = 0;
-      elapsedSec = 0;
-      userGrid = initialClues.map(row => [...row]);
-      pencilGrid = Array.from({ length: 81 }, () => new Set());
-      undoStack = [];
-      updateMistakeBadge();
-      timerDisplay.textContent = '00:00';
-      refreshBoard();
-      startTimer();
-      saveActiveGame();
-    });
-
-    btnNewFromGameOver.addEventListener('click', () => startNewGame(diffSelect.value));
-
-    // Keyboard support
-    window.addEventListener('keydown', (e) => {
-      if (isPaused || isGameOver || isGameWon) return;
-      if (e.key >= '1' && e.key <= '9') inputDigit(parseInt(e.key, 10));
-      else if (e.key === 'Backspace' || e.key === 'Delete') executeErase();
-      else if (e.key === 'm' || e.key === 'M') btnMemo.click();
-      else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) executeUndo();
-      else if (selectedCellIndex !== null) {
-        const r = Math.floor(selectedCellIndex / 9);
-        const c = selectedCellIndex % 9;
-        if (e.key === 'ArrowUp' && r > 0) handleCellClick(selectedCellIndex - 9);
-        if (e.key === 'ArrowDown' && r < 8) handleCellClick(selectedCellIndex + 9);
-        if (e.key === 'ArrowLeft' && c > 0) handleCellClick(selectedCellIndex - 1);
-        if (e.key === 'ArrowRight' && c < 8) handleCellClick(selectedCellIndex + 1);
+    // 通常入力：解答チェック
+    if (solution[selectedCell] !== num) {
+      mistakes++;
+      updateStatusHeader();
+      const cellEl = document.querySelector(`.cell[data-idx="${selectedCell}"]`);
+      if (cellEl) {
+        cellEl.classList.add('error');
+        setTimeout(() => cellEl.classList.remove('error'), 700);
       }
-    });
 
-    // Resize recalculation for SVG lines
-    window.addEventListener('resize', () => {
-      if (cages.length > 0) renderSvgCages();
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      buildBoardDOM();
-      if (!loadActiveGame()) {
-        startNewGame('expert');
+      if (mistakes >= 3) {
+        clearInterval(timerInterval);
+        document.getElementById('gameOverModal').classList.add('show');
       }
+      return;
+    }
+
+    // 正解入力
+    undoStack.push({
+      idx: selectedCell,
+      prevVal: userGrid[selectedCell],
+      prevNotes: notes[selectedCell] ? [...notes[selectedCell]] : []
     });
-  </script>
+
+    userGrid[selectedCell] = num;
+    delete notes[selectedCell];
+
+    // 同一ケージ・行・列から該当数字のメモを自動除去
+    const cg = cellCageMap[selectedCell];
+    const r = Math.floor(selectedCell / 9);
+    const c = selectedCell % 9;
+    for (let i = 0; i < 81; i++) {
+      const ir = Math.floor(i / 9);
+      const ic = i % 9;
+      if (ir === r || ic === c || (cg && cg.cells.includes(i))) {
+        if (notes[i]) {
+          notes[i] = notes[i].filter(n => n !== num);
+        }
+      }
+    }
+
+    renderBoard();
+    updateHighlights();
+    saveGame();
+    checkWinCondition();
+  }
+
+  function eraseSelected() {
+    if (selectedCell === null || initialGrid[selectedCell] !== 0) return;
+    if (userGrid[selectedCell] !== 0 || (notes[selectedCell] && notes[selectedCell].length > 0)) {
+      undoStack.push({
+        idx: selectedCell,
+        prevVal: userGrid[selectedCell],
+        prevNotes: notes[selectedCell] ? [...notes[selectedCell]] : []
+      });
+      userGrid[selectedCell] = 0;
+      delete notes[selectedCell];
+      renderBoard();
+      updateHighlights();
+      saveGame();
+    }
+  }
+
+  function undoLastMove() {
+    if (undoStack.length === 0) return;
+    const last = undoStack.pop();
+    userGrid[last.idx] = last.prevVal;
+    if (last.prevNotes && last.prevNotes.length > 0) {
+      notes[last.idx] = last.prevNotes;
+    } else {
+      delete notes[last.idx];
+    }
+    selectedCell = last.idx;
+    renderBoard();
+    updateHighlights();
+    saveGame();
+  }
+
+  function provideHint() {
+    if (selectedCell === null || userGrid[selectedCell] !== 0) {
+      // 空いているセルを自動探索
+      const emptyIdxs = [];
+      for (let i = 0; i < 81; i++) {
+        if (userGrid[i] === 0) emptyIdxs.push(i);
+      }
+      if (emptyIdxs.length === 0) return;
+      selectedCell = emptyIdxs[Math.floor(Math.random() * emptyIdxs.length)];
+    }
+    onNumberInput(solution[selectedCell]);
+  }
+
+  function checkWinCondition() {
+    for (let i = 0; i < 81; i++) {
+      if (userGrid[i] !== solution[i]) return;
+    }
+    clearInterval(timerInterval);
+    document.getElementById('winMessage').innerText = `所要タイム: ${formatTime(elapsedSeconds)}`;
+    document.getElementById('winModal').classList.add('show');
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  /* --- Timer & Data Persistence (Overwrites Single Key) --- */
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      elapsedSeconds++;
+      document.getElementById('dispTimer').innerText = formatTime(elapsedSeconds);
+      if (elapsedSeconds % 5 === 0) saveGame();
+    }, 1000);
+  }
+
+  function formatTime(s) {
+    const min = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${min}:${sec}`;
+  }
+
+  function updateStatusHeader() {
+    const diffNames = { hard: '上級', expert: 'エキスパート', master: 'マスター (極)' };
+    document.getElementById('dispDiff').innerText = diffNames[currentDifficulty];
+    document.getElementById('dispMistakes').innerText = `${mistakes}/3`;
+    document.getElementById('diffSelect').value = currentDifficulty;
+  }
+
+  function saveGame() {
+    const data = {
+      currentDifficulty,
+      solution,
+      initialGrid,
+      userGrid,
+      notes,
+      cages,
+      mistakes,
+      elapsedSeconds
+    };
+    // 常に単一キーへ上書き（スマホ容量を一切圧迫しない）
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  function loadSavedGame(data) {
+    currentDifficulty = data.currentDifficulty || 'expert';
+    solution = data.solution;
+    initialGrid = data.initialGrid;
+    userGrid = data.userGrid;
+    notes = data.notes || {};
+    cages = data.cages;
+    mistakes = data.mistakes || 0;
+    elapsedSeconds = data.elapsedSeconds || 0;
+
+    cellCageMap = {};
+    cages.forEach(cg => cg.cells.forEach(idx => cellCageMap[idx] = cg));
+
+    updateStatusHeader();
+    renderBoard();
+    drawCagesSVG();
+    startTimer();
+  }
+</script>
 </body>
 </html>
