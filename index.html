@@ -235,7 +235,7 @@
 
     .cell.has-sum .notes-grid {
       inset: 0px 2px 2px 2px;
-      padding-top: 13px; /* 合計値ラベル直下へ押し下げ */
+      padding-top: 13px;
     }
 
     .note-item {
@@ -336,7 +336,6 @@
     .key-btn:active {
       background: var(--primary-light);
     }
-    /* 9個すべて使用済みの数字ボタンスタイル */
     .key-btn.completed {
       opacity: 0.28;
       background: #e2e8f0;
@@ -351,7 +350,7 @@
       margin-top: 2px;
     }
 
-    /* Overlay Modals */
+    /* Modals */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -400,7 +399,7 @@
       cursor: pointer;
     }
 
-    /* Settings List */
+    /* Settings */
     .settings-list {
       text-align: left;
       margin-bottom: 20px;
@@ -602,7 +601,7 @@
   </div>
 </div>
 
-<!-- Loading & State Modals -->
+<!-- Modals -->
 <div class="modal-overlay" id="loadingModal">
   <div class="modal-card">
     <h2>パズルを生成中...</h2>
@@ -627,16 +626,14 @@
 </div>
 
 <script>
-  /* --- Game Settings Configuration --- */
   const SETTINGS_KEY = 'killer_sudoku_settings_v1';
   let settings = {
-    autoEraseNotes: true,   // メモ自動消去 (デフォルトON)
-    dimCompletedKeys: true, // 9個完了テンキー淡色化 (デフォルトON)
-    checkMistakes: true,    // 即時ミス＆3ライフ制 (デフォルトON)
-    highlightPeers: true    // 関連マス・同数字強調 (デフォルトON)
+    autoEraseNotes: true,
+    dimCompletedKeys: true,
+    checkMistakes: true,
+    highlightPeers: true
   };
 
-  /* --- Game State Variables --- */
   let currentDifficulty = 'expert';
   let solution = [];
   let userGrid = [];
@@ -651,7 +648,7 @@
   let elapsedSeconds = 0;
   let undoStack = [];
 
-  const STORAGE_KEY = 'killer_sudoku_active_game_v4';
+  const STORAGE_KEY = 'killer_sudoku_active_game_v5';
 
   window.addEventListener('DOMContentLoaded', () => {
     loadSettings();
@@ -758,7 +755,7 @@
     }
   }
 
-  /* --- Unique Solution Killer Puzzle Generator Engine --- */
+  /* --- 高速化された数独生成エンジン --- */
   function generateFullSudoku() {
     const board = Array(81).fill(0);
     const nums = [1,2,3,4,5,6,7,8,9];
@@ -796,6 +793,7 @@
     return board;
   }
 
+  /* --- 人間目線のケージ構築（ブロック跨ぎや中庸な合計値を自然に生成） --- */
   function buildKillerCages(fullBoard, difficulty) {
     const assigned = Array(81).fill(false);
     const cageList = [];
@@ -839,63 +837,139 @@
     return cageList;
   }
 
-  function countKillerSolutions(cageList, givenGrid, maxCount = 2) {
+  /* --- 超高速検証ソルバー（ビットマスク + MRV法 + 最小最大枝刈り） --- */
+  function countKillerSolutionsFast(cageList, givenGrid, maxCount = 2) {
     const board = [...givenGrid];
-    const cellMap = {};
-    cageList.forEach(cg => cg.cells.forEach(idx => cellMap[idx] = cg));
+    const cellCage = new Array(81);
+    cageList.forEach((cg, idx) => {
+      cg.cells.forEach(ci => cellCage[ci] = idx);
+    });
+
+    const cageCurrentSum = new Array(cageList.length).fill(0);
+    const cageFilledCount = new Array(cageList.length).fill(0);
+    const cageUsedBits = new Array(cageList.length).fill(0);
+
+    const rowBits = new Array(9).fill(0);
+    const colBits = new Array(9).fill(0);
+    const boxBits = new Array(9).fill(0);
+
+    let emptyIndices = [];
+
+    for (let i = 0; i < 81; i++) {
+      const v = board[i];
+      const r = Math.floor(i / 9);
+      const c = i % 9;
+      const b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+      const cgIdx = cellCage[i];
+
+      if (v !== 0) {
+        const bit = 1 << v;
+        rowBits[r] |= bit;
+        colBits[c] |= bit;
+        boxBits[b] |= bit;
+        cageCurrentSum[cgIdx] += v;
+        cageFilledCount[cgIdx]++;
+        cageUsedBits[cgIdx] |= bit;
+      } else {
+        emptyIndices.push(i);
+      }
+    }
+
     let solutions = 0;
 
-    function canPlace(idx, val) {
+    function getCandidates(idx) {
       const r = Math.floor(idx / 9);
       const c = idx % 9;
-      for (let i = 0; i < 9; i++) {
-        if (board[r * 9 + i] === val || board[i * 9 + c] === val) return false;
-      }
-      const br = Math.floor(r / 3) * 3;
-      const bc = Math.floor(c / 3) * 3;
-      for (let dr = 0; dr < 3; dr++) {
-        for (let dc = 0; dc < 3; dc++) {
-          if (board[(br + dr) * 9 + (bc + dc)] === val) return false;
-        }
-      }
-      const cg = cellMap[idx];
-      let sum = val;
-      let filled = 1;
-      for (let ci of cg.cells) {
-        if (ci !== idx) {
-          if (board[ci] === val) return false;
-          if (board[ci] !== 0) {
-            sum += board[ci];
-            filled++;
+      const b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+      const cgIdx = cellCage[idx];
+      const cg = cageList[cgIdx];
+
+      const usedMask = rowBits[r] | colBits[c] | boxBits[b] | cageUsedBits[cgIdx];
+      const remCells = cg.cells.length - cageFilledCount[cgIdx] - 1;
+      const remSum = cg.sum - cageCurrentSum[cgIdx];
+
+      let cand = [];
+      for (let n = 1; n <= 9; n++) {
+        if ((usedMask & (1 << n)) === 0) {
+          const needed = remSum - n;
+          if (needed < 0) continue;
+          if (remCells === 0) {
+            if (needed === 0) cand.push(n);
+          } else {
+            // 残りマスで達成可能な最小値・最大値による枝刈り
+            const minPossible = (remCells * (remCells + 1)) / 2;
+            const maxPossible = (remCells * (19 - remCells)) / 2;
+            if (needed >= minPossible && needed <= maxPossible) {
+              cand.push(n);
+            }
           }
         }
       }
-      if (sum > cg.sum) return false;
-      if (filled === cg.cells.length && sum !== cg.sum) return false;
-      return true;
+      return cand;
     }
 
-    function search(cellIdx) {
+    function search() {
       if (solutions >= maxCount) return;
-      if (cellIdx === 81) {
+
+      // MRV (Minimum Remaining Values): 入る候補が最も少ないマスを選択
+      let bestIdx = -1;
+      let minCandidates = null;
+      let minLen = 999;
+      let bestEmptyPos = -1;
+
+      for (let p = 0; p < emptyIndices.length; p++) {
+        const i = emptyIndices[p];
+        const cands = getCandidates(i);
+        const l = cands.length;
+        if (l === 0) return; // 行き詰まり（枝刈り）
+        if (l < minLen) {
+          minLen = l;
+          minCandidates = cands;
+          bestIdx = i;
+          bestEmptyPos = p;
+          if (l === 1) break; // 候補1個なら即座に決定
+        }
+      }
+
+      if (bestIdx === -1) {
         solutions++;
         return;
       }
-      if (board[cellIdx] !== 0) {
-        search(cellIdx + 1);
-        return;
+
+      emptyIndices.splice(bestEmptyPos, 1);
+
+      const r = Math.floor(bestIdx / 9);
+      const c = bestIdx % 9;
+      const b = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+      const cgIdx = cellCage[bestIdx];
+
+      for (let num of minCandidates) {
+        const bit = 1 << num;
+        board[bestIdx] = num;
+        rowBits[r] |= bit;
+        colBits[c] |= bit;
+        boxBits[b] |= bit;
+        cageCurrentSum[cgIdx] += num;
+        cageFilledCount[cgIdx]++;
+        cageUsedBits[cgIdx] |= bit;
+
+        search();
+
+        board[bestIdx] = 0;
+        rowBits[r] &= ~bit;
+        colBits[c] &= ~bit;
+        boxBits[b] &= ~bit;
+        cageCurrentSum[cgIdx] -= num;
+        cageFilledCount[cgIdx]--;
+        cageUsedBits[cgIdx] &= ~bit;
+
+        if (solutions >= maxCount) break;
       }
-      for (let num = 1; num <= 9; num++) {
-        if (canPlace(cellIdx, num)) {
-          board[cellIdx] = num;
-          search(cellIdx + 1);
-          board[cellIdx] = 0;
-          if (solutions >= maxCount) return;
-        }
-      }
+
+      emptyIndices.splice(bestEmptyPos, 0, bestIdx);
     }
 
-    search(0);
+    search();
     return solutions;
   }
 
@@ -906,12 +980,13 @@
     document.getElementById('gameOverModal').classList.remove('show');
     document.getElementById('winModal').classList.remove('show');
 
+    // UIのローディング表示を確実に出してから非同期で生成
     setTimeout(() => {
       if (isNewPuzzle || solution.length === 0) {
         let attempts = 0;
         let isUnique = false;
 
-        while (!isUnique && attempts < 25) {
+        while (!isUnique && attempts < 40) {
           attempts++;
           const candSolution = generateFullSudoku();
           const candCages = buildKillerCages(candSolution, currentDifficulty);
@@ -920,7 +995,7 @@
           let prefilled = 0;
           if (currentDifficulty === 'hard') prefilled = 2;
           if (currentDifficulty === 'expert') prefilled = 1;
-          if (currentDifficulty === 'master') prefilled = 0;
+          if (currentDifficulty === 'master') prefilled = 0; // 極はヒント完全ゼロ！
 
           if (prefilled > 0) {
             const indices = [...Array(81).keys()].sort(() => Math.random() - 0.5);
@@ -929,7 +1004,8 @@
             }
           }
 
-          if (countKillerSolutions(candCages, candInitial, 2) === 1) {
+          // 高速化されたソルバーで解がちょうど1通りか検証
+          if (countKillerSolutionsFast(candCages, candInitial, 2) === 1) {
             solution = candSolution;
             cages = candCages;
             initialGrid = candInitial;
@@ -1119,7 +1195,6 @@
     });
   }
 
-  /* --- Input & Auto Erase Logic --- */
   function onNumberInput(num) {
     if (selectedCell === null || initialGrid[selectedCell] !== 0) return;
 
@@ -1137,7 +1212,6 @@
       return;
     }
 
-    // ミス判定ONの場合の即時チェック
     if (settings.checkMistakes && solution[selectedCell] !== num) {
       mistakes++;
       updateStatusHeader();
@@ -1154,7 +1228,6 @@
       return;
     }
 
-    // 正解入力の反映
     undoStack.push({
       idx: selectedCell,
       prevVal: userGrid[selectedCell],
@@ -1164,7 +1237,6 @@
     userGrid[selectedCell] = num;
     delete notes[selectedCell];
 
-    // 【重要】設定がONの場合：所属行・列・3×3ブロック・ケージから候補値メモを自動消去
     if (settings.autoEraseNotes) {
       const cg = cellCageMap[selectedCell];
       const r = Math.floor(selectedCell / 9);
