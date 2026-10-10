@@ -60,7 +60,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 4px 10px 4px;
+      padding: 4px 4px 6px 4px;
     }
     .top-title {
       font-size: 1.15rem;
@@ -95,12 +95,33 @@
       justify-content: center;
     }
 
+    /* 本日の利用ログバー（戒めバッジ） */
+    .daily-tracker-bar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 0 4px 6px 4px;
+    }
+    .daily-tracker-badge {
+      font-size: 0.72rem;
+      color: #64748b;
+      background: #edf2f9;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .daily-tracker-badge strong {
+      color: #334155;
+      font-weight: 700;
+    }
+
     /* Status Bar */
     .status-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0 4px 10px 4px;
+      padding: 0 4px 8px 4px;
       font-size: 0.85rem;
       color: var(--text-sub);
       font-weight: 500;
@@ -484,6 +505,13 @@
     </div>
   </div>
 
+  <!-- 本日のプレイ記録（戒め表示） -->
+  <div class="daily-tracker-bar">
+    <div class="daily-tracker-badge" id="dailyTrackerBadge">
+      今日: <strong id="dailyPlayCount">0</strong>問目 / 累計 <strong id="dailyPlayTime">0分</strong>
+    </div>
+  </div>
+
   <!-- Status Bar -->
   <div class="status-bar">
     <div class="status-item">
@@ -627,6 +655,8 @@
 
 <script>
   const SETTINGS_KEY = 'killer_sudoku_settings_v1';
+  const DAILY_USAGE_KEY = 'killer_sudoku_daily_usage_v1';
+
   let settings = {
     autoEraseNotes: true,
     dimCompletedKeys: true,
@@ -648,9 +678,15 @@
   let elapsedSeconds = 0;
   let undoStack = [];
 
+  // 今日の累計利用状況
+  let todayDateStr = '';
+  let dailyPlays = 0;
+  let dailyActiveSeconds = 0;
+
   const STORAGE_KEY = 'killer_sudoku_active_game_v5';
 
   window.addEventListener('DOMContentLoaded', () => {
+    initDailyTracker();
     loadSettings();
     buildKeypad();
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -664,6 +700,81 @@
       startNewGame(true);
     }
   });
+
+  /* --- 本日の累計プレイ記録管理 --- */
+  function getTodayString() {
+    const now = new Date();
+    return `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${now.getDate().toString().padStart(2,'0')}`;
+  }
+
+  function initDailyTracker() {
+    todayDateStr = getTodayString();
+    const saved = localStorage.getItem(DAILY_USAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.date === todayDateStr) {
+          dailyPlays = parsed.plays || 0;
+          dailyActiveSeconds = parsed.activeSeconds || 0;
+        } else {
+          // 日付が変わっていればリセット
+          dailyPlays = 0;
+          dailyActiveSeconds = 0;
+        }
+      } catch(e) {
+        dailyPlays = 0;
+        dailyActiveSeconds = 0;
+      }
+    }
+    updateDailyTrackerUI();
+  }
+
+  function incrementDailyPlays() {
+    checkDateRollover();
+    dailyPlays++;
+    saveDailyTracker();
+    updateDailyTrackerUI();
+  }
+
+  function tickDailySeconds() {
+    checkDateRollover();
+    dailyActiveSeconds++;
+    if (dailyActiveSeconds % 10 === 0) {
+      saveDailyTracker();
+    }
+    updateDailyTrackerUI();
+  }
+
+  function checkDateRollover() {
+    const curDate = getTodayString();
+    if (curDate !== todayDateStr) {
+      todayDateStr = curDate;
+      dailyPlays = 0;
+      dailyActiveSeconds = 0;
+      saveDailyTracker();
+    }
+  }
+
+  function saveDailyTracker() {
+    const data = {
+      date: todayDateStr,
+      plays: dailyPlays,
+      activeSeconds: dailyActiveSeconds
+    };
+    localStorage.setItem(DAILY_USAGE_KEY, JSON.stringify(data));
+  }
+
+  function updateDailyTrackerUI() {
+    document.getElementById('dailyPlayCount').innerText = `${dailyPlays}`;
+    const m = Math.floor(dailyActiveSeconds / 60);
+    if (m < 60) {
+      document.getElementById('dailyPlayTime').innerText = `${m}分`;
+    } else {
+      const h = Math.floor(m / 60);
+      const remM = m % 60;
+      document.getElementById('dailyPlayTime').innerText = `${h}時間${remM}分`;
+    }
+  }
 
   function loadSettings() {
     const s = localStorage.getItem(SETTINGS_KEY);
@@ -755,7 +866,6 @@
     }
   }
 
-  /* --- 高速化された数独生成エンジン --- */
   function generateFullSudoku() {
     const board = Array(81).fill(0);
     const nums = [1,2,3,4,5,6,7,8,9];
@@ -793,7 +903,6 @@
     return board;
   }
 
-  /* --- 人間目線のケージ構築（ブロック跨ぎや中庸な合計値を自然に生成） --- */
   function buildKillerCages(fullBoard, difficulty) {
     const assigned = Array(81).fill(false);
     const cageList = [];
@@ -837,7 +946,6 @@
     return cageList;
   }
 
-  /* --- 超高速検証ソルバー（ビットマスク + MRV法 + 最小最大枝刈り） --- */
   function countKillerSolutionsFast(cageList, givenGrid, maxCount = 2) {
     const board = [...givenGrid];
     const cellCage = new Array(81);
@@ -896,7 +1004,6 @@
           if (remCells === 0) {
             if (needed === 0) cand.push(n);
           } else {
-            // 残りマスで達成可能な最小値・最大値による枝刈り
             const minPossible = (remCells * (remCells + 1)) / 2;
             const maxPossible = (remCells * (19 - remCells)) / 2;
             if (needed >= minPossible && needed <= maxPossible) {
@@ -911,7 +1018,6 @@
     function search() {
       if (solutions >= maxCount) return;
 
-      // MRV (Minimum Remaining Values): 入る候補が最も少ないマスを選択
       let bestIdx = -1;
       let minCandidates = null;
       let minLen = 999;
@@ -921,13 +1027,13 @@
         const i = emptyIndices[p];
         const cands = getCandidates(i);
         const l = cands.length;
-        if (l === 0) return; // 行き詰まり（枝刈り）
+        if (l === 0) return;
         if (l < minLen) {
           minLen = l;
           minCandidates = cands;
           bestIdx = i;
           bestEmptyPos = p;
-          if (l === 1) break; // 候補1個なら即座に決定
+          if (l === 1) break;
         }
       }
 
@@ -980,7 +1086,9 @@
     document.getElementById('gameOverModal').classList.remove('show');
     document.getElementById('winModal').classList.remove('show');
 
-    // UIのローディング表示を確実に出してから非同期で生成
+    // 新規プレイ数を加算
+    incrementDailyPlays();
+
     setTimeout(() => {
       if (isNewPuzzle || solution.length === 0) {
         let attempts = 0;
@@ -995,7 +1103,7 @@
           let prefilled = 0;
           if (currentDifficulty === 'hard') prefilled = 2;
           if (currentDifficulty === 'expert') prefilled = 1;
-          if (currentDifficulty === 'master') prefilled = 0; // 極はヒント完全ゼロ！
+          if (currentDifficulty === 'master') prefilled = 0;
 
           if (prefilled > 0) {
             const indices = [...Array(81).keys()].sort(() => Math.random() - 0.5);
@@ -1004,7 +1112,6 @@
             }
           }
 
-          // 高速化されたソルバーで解がちょうど1通りか検証
           if (countKillerSolutionsFast(candCages, candInitial, 2) === 1) {
             solution = candSolution;
             cages = candCages;
@@ -1327,6 +1434,10 @@
     timerInterval = setInterval(() => {
       elapsedSeconds++;
       document.getElementById('dispTimer').innerText = formatTime(elapsedSeconds);
+      
+      // 本日の累計プレイ時間をインクリメント
+      tickDailySeconds();
+
       if (elapsedSeconds % 5 === 0) saveGame();
     }, 1000);
   }
